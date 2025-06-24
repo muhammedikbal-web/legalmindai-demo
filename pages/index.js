@@ -14,6 +14,7 @@ export default function Home() {
     Hemen Analiz Et
   </button>
 </Link>
+
             <Link href="/translation">Hukuki Çeviri</Link>
             <Link href="/blog">Makaleler</Link>
             <Link href="/about">Hakkımızda</Link>
