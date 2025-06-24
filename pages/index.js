@@ -9,7 +9,11 @@ export default function Home() {
         <div className="container mx-auto px-6 flex justify-between items-center">
           <h1 className="text-2xl font-bold">LegalMind AI</h1>
           <nav className="space-x-6 text-sm md:text-base">
-            <Link href="/contract">Sözleşme Analizi</Link>
+           <Link href="/contract">
+  <button className="bg-blue-600 text-white px-6 py-2 rounded-xl mt-6 shadow hover:bg-blue-700 transition-all duration-300">
+    Hemen Analiz Et
+  </button>
+</Link>
             <Link href="/translation">Hukuki Çeviri</Link>
             <Link href="/blog">Makaleler</Link>
             <Link href="/about">Hakkımızda</Link>
