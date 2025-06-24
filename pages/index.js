@@ -1,7 +1,5 @@
 
-   // Ana sayfa ve menü tasarımı (React + Next.js + TailwindCSS)
-// Bu yapı, mevcut projene kolayca entegre edilebilir.
-
+  
 import Link from "next/link";
 
 export default function Home() {
@@ -11,9 +9,9 @@ export default function Home() {
         <div className="container mx-auto px-6 flex justify-between items-center">
           <h1 className="text-2xl font-bold">LegalMind AI</h1>
           <nav className="space-x-6 text-sm md:text-base">
-            <Link href="/analyze">Sözleşme Analizi</Link>
-            <Link href="/translate">Hukuki Çeviri</Link>
-            <Link href="/articles">Makaleler</Link>
+            <Link href="/contract">Sözleşme Analizi</Link>
+            <Link href="/translation">Hukuki Çeviri</Link>
+            <Link href="/blog">Makaleler</Link>
             <Link href="/about">Hakkımızda</Link>
           </nav>
         </div>
