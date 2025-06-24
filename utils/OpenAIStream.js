@@ -1,4 +1,3 @@
-
 export async function OpenAIStream(payload) {
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
@@ -13,18 +12,43 @@ export async function OpenAIStream(payload) {
   });
 
   if (!res.ok) {
-    throw new Error(`OpenAI API hatası: ${res.statusText}`);
+    const error = await res.text();
+    throw new Error("OpenAI API error: " + error);
   }
 
-  const reader = res.body.getReader();
   const stream = new ReadableStream({
     async start(controller) {
+      const reader = res.body.getReader();
+      let buffer = "";
+
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        controller.enqueue(value);
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (trimmed && trimmed.startsWith("data: ")) {
+            const json = trimmed.replace("data: ", "");
+            if (json === "[DONE]") {
+              controller.close();
+              return;
+            }
+
+            try {
+              const parsed = JSON.parse(json);
+              const content = parsed.choices?.[0]?.delta?.content;
+              if (content) {
+                controller.enqueue(encoder.encode(content));
+              }
+            } catch (err) {
+              controller.error(err);
+            }
+          }
+        }
       }
-      controller.close();
     },
   });
 

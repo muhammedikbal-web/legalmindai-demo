@@ -1,4 +1,3 @@
-
 import { OpenAIStream } from "../../utils/OpenAIStream";
 
 export const config = {
@@ -6,37 +5,29 @@ export const config = {
 };
 
 const handler = async (req) => {
-  const { contractText } = await req.json();
+  const { prompt } = await req.json();
 
-  const prompt = `Aşağıda yer alan sözleşme maddelerini madde madde analiz et.
+  const fullPrompt = `
+Aşağıdaki sözleşme maddelerini madde madde analiz et. Her maddenin:
 
-Her madde için:
+1. İçeriğini açıkla.
+2. Türk hukukuna (özellikle Türk Borçlar Kanunu, Anayasa, İş Kanunu vb.) göre riskli veya geçersiz olup olmadığını değerlendir.
+3. Risk varsa nedenini ve kanuni dayanağıyla birlikte belirt.
 
-1. Maddenin anlamını ve taraflara yüklediği yükümlülükleri açıkla.
-2. Maddenin Türk hukukuna (özellikle Türk Borçlar Kanunu, Anayasa, İş Kanunu, Tüketici Kanunu gibi temel düzenlemelere) göre geçerli olup olmadığını değerlendir.
-3. Maddenin içinde ciddi bir eşitsizlik, tek taraflılık, genel işlem koşullarına aykırılık, kanuna aykırı feragat ya da kamu düzenine aykırılık varsa bunu belirt.
-4. Eğer madde hukuki risk barındırıyorsa "🟡 Riskli Madde" olarak etiketle ve nedenini açıkla.
-5. Eğer madde Türk hukukuna açıkça aykırıysa "🔴 Geçersiz Madde" olarak etiketle ve ilgili kanun hükmünü belirt.
-6. Eğer madde uygun ve geçerliyse "✅ Uygun Madde" olarak etiketle.
+Ayrıca her maddenin sonuna aşağıdaki uygun etiketi ekle:
 
-Cevabı çok teknik değil, kullanıcıların da anlayacağı açıklıkta yaz. Her madde için ayrı ayrı değerlendir ve etiketlemeyi açıkça yaz.
+✅ Uygun Madde
+🟡 Riskli Madde
+🔴 Geçersiz Madde
 
-Sözleşme metni:
-${contractText}`;
+Sözleşme:
+${prompt}
+`;
 
   const payload = {
-    model: "gpt-4",
-    messages: [
-      {
-        role: "system",
-        content: "Bir hukuk uzmanı gibi davran.",
-      },
-      {
-        role: "user",
-        content: prompt,
-      },
-    ],
-    temperature: 0.2,
+    model: "gpt-3.5-turbo",
+    messages: [{ role: "user", content: fullPrompt }],
+    temperature: 0.4,
     stream: true,
   };
 
