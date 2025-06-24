@@ -20,7 +20,8 @@ export default function Home() {
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ text: inputText })
+        body: JSON.stringify({ contractText: inputText })
+
       });
 
       const data = await response.json();
