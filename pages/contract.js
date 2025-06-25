@@ -1,67 +1,59 @@
-
 import { useState } from "react";
 
 export default function ContractPage() {
-  const [contractText, setContractText] = useState("");
-  const [analysisResult, setAnalysisResult] = useState("");
+  const [inputText, setInputText] = useState("");
+  const [result, setResult] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleAnalyze = async () => {
+    if (!inputText.trim()) return;
+
     setLoading(true);
-    setAnalysisResult("Analiz ediliyor, lütfen bekleyiniz...");
 
-    const response = await fetch("/api/analyze", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ contractText }),
-    });
+    try {
+      const res = await fetch("/api/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ contractText: inputText }),
+      });
 
-    const data = await response.json();
+      const data = await res.json();
+      setResult(data.result || "Cevap alınamadı.");
+    } catch (err) {
+      console.error(err);
+      setResult("Bir hata oluştu.");
+    }
+
     setLoading(false);
-    setAnalysisResult(data.result || "Cevap alınamadı.");
-  };
-
-  const renderResultCards = () => {
-    if (!analysisResult || loading) return null;
-
-    // Her maddeyi "Madde 1:" ile başlayan bloklara ayır
-    const items = analysisResult.split(/(?=Madde \d+:)/g);
-
-    return (
-      <div className="mt-6 space-y-6">
-        {items.map((item, index) => (
-          <div
-            key={index}
-            className="bg-white border-l-4 border-blue-600 p-4 shadow rounded-xl whitespace-pre-line"
-          >
-            {item.trim()}
-          </div>
-        ))}
-      </div>
-    );
   };
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4 text-center">Sözleşme Analizi</h1>
-      <textarea
-        className="w-full h-48 p-4 border rounded resize-none shadow focus:outline-none focus:ring-2 focus:ring-blue-400"
-        placeholder="Sözleşme metnini buraya yapıştırın..."
-        value={contractText}
-        onChange={(e) => setContractText(e.target.value)}
-      />
-      <div className="text-center">
-        <button
-          onClick={handleAnalyze}
-          className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 transition-all"
-        >
-          {loading ? "Analiz Ediliyor..." : "Analiz Et"}
-        </button>
-      </div>
+      <h1 className="text-3xl font-bold mb-4">Sözleşme Analizi</h1>
 
-      {renderResultCards()}
+      <textarea
+        value={inputText}
+        onChange={(e) => setInputText(e.target.value)}
+        placeholder="Lütfen analiz etmek istediğiniz sözleşme metnini buraya yapıştırın..."
+        className="w-full h-60 p-4 border border-gray-300 rounded-xl shadow mb-4"
+      ></textarea>
+
+      <button
+        onClick={handleAnalyze}
+        disabled={loading || !inputText.trim()}
+        className="bg-blue-600 text-white px-6 py-2 rounded-xl shadow hover:bg-blue-700 transition-all duration-300 disabled:opacity-50"
+      >
+        {loading ? "Analiz Ediliyor..." : "Analiz Et"}
+      </button>
+
+      {result && (
+        <div className="mt-6 p-4 bg-white border border-gray-300 rounded-xl shadow">
+          <h2 className="text-xl font-semibold mb-2">Analiz Sonucu:</h2>
+          <pre className="whitespace-pre-wrap text-gray-800">{result}</pre>
+        </div>
+      )}
     </div>
   );
 }
