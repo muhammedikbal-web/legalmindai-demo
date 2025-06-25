@@ -7,8 +7,6 @@ export default function ContractPage() {
 
   const handleAnalyze = async () => {
     setLoading(true);
-    setAnalysisResult("Analiz ediliyor, lütfen bekleyiniz...");
-
     const response = await fetch("/api/analyze", {
       method: "POST",
       headers: {
@@ -23,19 +21,22 @@ export default function ContractPage() {
   };
 
   const renderResultCards = () => {
-    if (!analysisResult || loading) return null;
+    if (!analysisResult) return null;
 
-    // Madde bazlı bölme
-    const maddeParcalari = analysisResult.split(/(?=Madde \d+:)/g);
+    const pattern = /Madde\s*\d+:/g;
+    const splitResult = analysisResult.split(pattern).filter(Boolean);
+    const headers = analysisResult.match(pattern) || [];
 
     return (
       <div className="mt-6 space-y-4">
-        {maddeParcalari.map((madde, index) => (
+        {splitResult.map((content, index) => (
           <div
             key={index}
-            className="bg-white border-l-4 border-blue-600 p-4 shadow rounded-xl whitespace-pre-line"
+            className="bg-white border-l-4 border-blue-600 p-4 shadow rounded-xl"
           >
-            {madde.trim()}
+            <p className="text-gray-800 whitespace-pre-line">
+              {headers[index]}{":\n"}{content.trim()}
+            </p>
           </div>
         ))}
       </div>
@@ -54,9 +55,10 @@ export default function ContractPage() {
       <div className="text-center">
         <button
           onClick={handleAnalyze}
-          className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 transition-all"
+          disabled={loading}
+          className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 transition-all disabled:opacity-50"
         >
-          {loading ? "Analiz Ediliyor..." : "Analiz Et"}
+          {loading ? "Analiz ediliyor, lütfen bekleyiniz..." : "Analiz Et"}
         </button>
       </div>
 
@@ -64,3 +66,4 @@ export default function ContractPage() {
     </div>
   );
 }
+
