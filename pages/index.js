@@ -1,8 +1,7 @@
 
-  
-import Link from "next/link";
+  import Link from "next/link";
 
-export default function Home() {
+export default function HomePage() {
   return (
     <main className="min-h-screen bg-white text-gray-900">
       <header className="bg-[#0F172A] text-white py-6 shadow-md">
