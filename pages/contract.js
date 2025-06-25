@@ -2,44 +2,58 @@ import { useState } from "react";
 
 export default function ContractPage() {
   const [contractText, setContractText] = useState("");
-  const [analysisResult, setAnalysisResult] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const handleAnalyze = async () => {
-    setIsLoading(true);
-    setAnalysisResult([]);
+    if (!contractText.trim()) return;
+    setLoading(true);
+    setAnalysisResult(""); // önceki sonucu temizle
+    try {
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ contractText }),
+      });
 
-    const response = await fetch("/api/analyze", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ contractText }),
-    });
-
-    const data = await response.json();
-    setIsLoading(false);
-    setAnalysisResult(data.result || []);
+      const data = await response.json();
+      setAnalysisResult(data.result || "Cevap alınamadı.");
+    } catch (error) {
+      setAnalysisResult("Bir hata oluştu. Lütfen tekrar deneyin.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const renderResultCards = () => {
-    if (!analysisResult.length) return null;
+    if (!analysisResult) return null;
+
+    const maddeler = analysisResult
+      .split(/---+/)
+      .map((block) => block.trim())
+      .filter((block) => block);
 
     return (
-      <div className="mt-6 space-y-4">
-        {analysisResult.map((item, index) => {
-          const { madde, durum, gerekce, açıklama } = item;
-          const cardColor = durum === "Riskli" ? "bg-red-100" : durum === "Uygun" ? "bg-green-100" : "bg-yellow-100";
+      <div className="mt-6 space-y-6">
+        {maddeler.map((madde, index) => {
+          const isGeçersiz = madde.includes("🔴");
+          const isRiskli = madde.includes("🟡");
+          const isUygun = madde.includes("✅");
+
+          const borderColor = isGeçersiz
+            ? "border-red-600"
+            : isRiskli
+            ? "border-yellow-500"
+            : "border-green-600";
 
           return (
             <div
               key={index}
-              className={`p-4 shadow rounded-xl ${cardColor} border-l-4 ${durum === "Riskli" ? "border-red-600" : durum === "Uygun" ? "border-green-600" : "border-yellow-600"}`}
+              className={`bg-white border-l-4 ${borderColor} p-4 shadow-md rounded-xl whitespace-pre-line`}
             >
-              <h2 className="text-blue-700 font-bold mb-2">{madde}</h2>
-              <p className="text-gray-800 font-semibold">{durum}</p>
-              <p className="text-gray-600">{gerekce}</p>
-              <p className="text-gray-800 whitespace-pre-line mt-2">{açıklama}</p>
+              <p className="text-gray-800">{madde}</p>
             </div>
           );
         })}
@@ -49,26 +63,29 @@ export default function ContractPage() {
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4 text-center">Sözleşme Analizi</h1>
+      <h1 className="text-2xl font-bold mb-4 text-center text-blue-700">
+        Sözleşme Analizi
+      </h1>
+
       <textarea
         className="w-full h-48 p-4 border rounded resize-none shadow focus:outline-none focus:ring-2 focus:ring-blue-400"
         placeholder="Sözleşme metnini buraya yapıştırın..."
         value={contractText}
         onChange={(e) => setContractText(e.target.value)}
       />
-      <div className="text-center">
+
+      <div className="text-center mt-4">
         <button
           onClick={handleAnalyze}
-          className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 transition-all"
-          disabled={isLoading}
+          className="px-6 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 transition-all"
         >
-          {isLoading ? "Analiz ediliyor..." : "Analiz Et"}
+          Analiz Et
         </button>
       </div>
 
-      {isLoading && (
+      {loading && (
         <p className="mt-4 text-center text-blue-600 font-medium animate-pulse">
-          Lütfen bekleyin, sözleşme analiz ediliyor...
+          🔄 Analiz ediliyor, lütfen bekleyiniz...
         </p>
       )}
 
@@ -76,3 +93,4 @@ export default function ContractPage() {
     </div>
   );
 }
+
