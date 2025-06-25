@@ -1,18 +1,21 @@
-
-  import Link from "next/link";
+import Link from 'next/link';
 
 export default function HomePage() {
   return (
-    <main className="min-h-screen bg-white text-gray-900">
-      <header className="bg-[#0F172A] text-white py-6 shadow-md">
-        <div className="container mx-auto px-6 flex justify-between items-center">
-          <h1 className="text-2xl font-bold">LegalMind AI</h1>
-          <nav className="space-x-6 text-sm md:text-base">
-           <Link href="/contract">
-  <button className="bg-blue-600 text-white px-6 py-2 rounded-xl mt-6 shadow hover:bg-blue-700 transition-all duration-300">
-    Hemen Analiz Et
-  </button>
-</Link>
+    <main className="flex flex-col items-center justify-center min-h-screen p-6">
+      <h1 className="text-4xl font-bold mb-4">LegalMind AI</h1>
+      <p className="text-lg text-center max-w-xl">
+        Hukuk ve teknolojinin kesişim noktasında yer alan yeni nesil hukuk platformu.
+      </p>
+
+      <Link href="/contract">
+        <button className="bg-blue-600 text-white px-6 py-2 rounded-xl mt-6 shadow hover:bg-blue-700 transition-all duration-300">
+          Hemen Analiz Et
+        </button>
+      </Link>
+    </main>
+  );
+}
 
             <Link href="/translation">Hukuki Çeviri</Link>
             <Link href="/blog">Makaleler</Link>
