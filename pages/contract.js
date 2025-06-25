@@ -3,8 +3,12 @@ import { useState } from "react";
 export default function ContractPage() {
   const [contractText, setContractText] = useState("");
   const [analysisResult, setAnalysisResult] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleAnalyze = async () => {
+    setIsLoading(true);
+    setAnalysisResult("");
+
     const response = await fetch("/api/analyze", {
       method: "POST",
       headers: {
@@ -14,22 +18,27 @@ export default function ContractPage() {
     });
 
     const data = await response.json();
+    setIsLoading(false);
     setAnalysisResult(data.result || "Cevap alınamadı.");
   };
 
   const renderResultCards = () => {
     if (!analysisResult) return null;
 
-    const paragraphs = analysisResult.split("\n\n");
+    // Her "Madde X:" başlığını ayrı bir karta alalım
+    const rawSections = analysisResult.split(/Madde\s\d+:/g).slice(1);
+    const fullSections = analysisResult
+      .match(/Madde\s\d+:/g)
+      .map((title, idx) => `${title}${rawSections[idx]}`);
 
     return (
       <div className="mt-6 space-y-4">
-        {paragraphs.map((para, index) => (
+        {fullSections.map((text, index) => (
           <div
             key={index}
-            className="bg-white border-l-4 border-blue-600 p-4 shadow rounded-xl"
+            className="bg-white border-l-4 border-blue-600 p-4 shadow rounded-xl whitespace-pre-wrap"
           >
-            <p className="text-gray-800 whitespace-pre-line">{para}</p>
+            {text.trim()}
           </div>
         ))}
       </div>
@@ -49,10 +58,17 @@ export default function ContractPage() {
         <button
           onClick={handleAnalyze}
           className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 transition-all"
+          disabled={isLoading}
         >
-          Analiz Et
+          {isLoading ? "Analiz ediliyor..." : "Analiz Et"}
         </button>
       </div>
+
+      {isLoading && (
+        <p className="mt-4 text-center text-blue-600 font-medium animate-pulse">
+          Lütfen bekleyin, sözleşme analiz ediliyor...
+        </p>
+      )}
 
       {renderResultCards()}
     </div>
