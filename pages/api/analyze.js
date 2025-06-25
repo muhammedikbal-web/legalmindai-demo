@@ -51,14 +51,10 @@ Sadece analiz et ve çıktıyı yukarıdaki formatta oluştur.
     });
 
     const data = await response.json();
+
     const result = data.choices?.[0]?.message?.content || "Cevap alınamadı.";
     res.status(200).json({ result });
   } catch (error) {
-    console.error("API Hatası:", error);
-    res.status(500).json({ error: "Sunucu hatası" });
+    res.status(500).json({ error: "Sunucu hatası: " + error.message });
   }
 }
-
-
-
- 
