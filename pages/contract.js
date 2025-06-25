@@ -22,28 +22,28 @@ export default function ContractPage() {
     setAnalysisResult(data.result || "Cevap alınamadı.");
   };
 
-  const renderResultCards = () => {
-    if (!analysisResult) return null;
+const renderResultCards = () => {
+  if (!analysisResult) return null;
 
-    // Her "Madde X:" başlığını ayrı bir karta alalım
-    const rawSections = analysisResult.split(/Madde\s\d+:/g).slice(1);
-    const fullSections = analysisResult
-      .match(/Madde\s\d+:/g)
-      .map((title, idx) => `${title}${rawSections[idx]}`);
+  const maddeRegex = /Madde\s\d+:/g;
+  const parts = analysisResult.split(maddeRegex).filter(Boolean);
+  const headers = analysisResult.match(maddeRegex) || [];
 
-    return (
-      <div className="mt-6 space-y-4">
-        {fullSections.map((text, index) => (
-          <div
-            key={index}
-            className="bg-white border-l-4 border-blue-600 p-4 shadow rounded-xl whitespace-pre-wrap"
-          >
-            {text.trim()}
-          </div>
-        ))}
-      </div>
-    );
-  };
+  return (
+    <div className="mt-6 space-y-4">
+      {parts.map((part, index) => (
+        <div
+          key={index}
+          className="bg-white border-l-4 border-blue-600 p-4 shadow rounded-xl"
+        >
+          <h2 className="text-blue-700 font-bold mb-2">{headers[index]}</h2>
+          <p className="text-gray-800 whitespace-pre-line">{part.trim()}</p>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
