@@ -7,7 +7,15 @@ export default function Home() {
       <nav className="bg-white shadow-md py-4 px-6 flex justify-between items-center">
         <h1 className="text-xl font-bold text-blue-700">LegalMind AI</h1>
         <div className="space-x-8">
-          <Link href="/contract" className="hover:text-blue-700 font-medium">Sözleşme Analizi</Link>
+          <Link href="/contract">
+  <button className="bg-gradient-to-r from-blue-600 to-blue-800 text-white text-lg font-semibold px-8 py-3 rounded-2xl mt-8 shadow-lg hover:scale-105 hover:shadow-xl transition-all duration-300">
+    Hemen Analiz Et
+  </button>
+</Link>
+<p className="mt-4 text-gray-600 text-sm">
+  Yapay zeka destekli analizle, sözleşmenizi saniyeler içinde değerlendirin.
+</p>
+
           <Link href="/translation" className="hover:text-blue-700 font-medium">Hukuki Çeviri</Link>
           <Link href="/blog" className="hover:text-blue-700 font-medium">Makaleler</Link>
           <Link href="/about" className="hover:text-blue-700 font-medium">Hakkımızda</Link>
