@@ -2,12 +2,12 @@ import { useState } from "react";
 
 export default function ContractPage() {
   const [contractText, setContractText] = useState("");
-  const [analysisResult, setAnalysisResult] = useState("");
+  const [analysisResult, setAnalysisResult] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleAnalyze = async () => {
     setIsLoading(true);
-    setAnalysisResult("");
+    setAnalysisResult([]);
 
     const response = await fetch("/api/analyze", {
       method: "POST",
@@ -19,31 +19,33 @@ export default function ContractPage() {
 
     const data = await response.json();
     setIsLoading(false);
-    setAnalysisResult(data.result || "Cevap alınamadı.");
+    setAnalysisResult(data.result || []);
   };
 
-const renderResultCards = () => {
-  if (!analysisResult) return null;
+  const renderResultCards = () => {
+    if (!analysisResult.length) return null;
 
-  const maddeRegex = /Madde\s\d+:/g;
-  const parts = analysisResult.split(maddeRegex).filter(Boolean);
-  const headers = analysisResult.match(maddeRegex) || [];
+    return (
+      <div className="mt-6 space-y-4">
+        {analysisResult.map((item, index) => {
+          const { madde, durum, gerekce, açıklama } = item;
+          const cardColor = durum === "Riskli" ? "bg-red-100" : durum === "Uygun" ? "bg-green-100" : "bg-yellow-100";
 
-  return (
-    <div className="mt-6 space-y-4">
-      {parts.map((part, index) => (
-        <div
-          key={index}
-          className="bg-white border-l-4 border-blue-600 p-4 shadow rounded-xl"
-        >
-          <h2 className="text-blue-700 font-bold mb-2">{headers[index]}</h2>
-          <p className="text-gray-800 whitespace-pre-line">{part.trim()}</p>
-        </div>
-      ))}
-    </div>
-  );
-};
-
+          return (
+            <div
+              key={index}
+              className={`p-4 shadow rounded-xl ${cardColor} border-l-4 ${durum === "Riskli" ? "border-red-600" : durum === "Uygun" ? "border-green-600" : "border-yellow-600"}`}
+            >
+              <h2 className="text-blue-700 font-bold mb-2">{madde}</h2>
+              <p className="text-gray-800 font-semibold">{durum}</p>
+              <p className="text-gray-600">{gerekce}</p>
+              <p className="text-gray-800 whitespace-pre-line mt-2">{açıklama}</p>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
 
   return (
     <div className="p-6 max-w-3xl mx-auto">
