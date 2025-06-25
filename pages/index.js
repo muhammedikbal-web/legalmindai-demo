@@ -6,7 +6,7 @@ export default function Home() {
       {/* Navbar */}
       <nav className="bg-white shadow-md py-4 px-6 flex justify-between items-center">
         <h1 className="text-xl font-bold text-blue-700">LegalMind AI</h1>
-        <div className="space-x-4">
+        <div className="space-x-8">
           <Link href="/contract" className="hover:text-blue-700 font-medium">Sözleşme Analizi</Link>
           <Link href="/translation" className="hover:text-blue-700 font-medium">Hukuki Çeviri</Link>
           <Link href="/blog" className="hover:text-blue-700 font-medium">Makaleler</Link>
