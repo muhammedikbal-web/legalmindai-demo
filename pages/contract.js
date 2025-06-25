@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 
 export default function ContractPage() {
@@ -7,6 +8,8 @@ export default function ContractPage() {
 
   const handleAnalyze = async () => {
     setLoading(true);
+    setAnalysisResult("Analiz ediliyor, lütfen bekleyiniz...");
+
     const response = await fetch("/api/analyze", {
       method: "POST",
       headers: {
@@ -16,27 +19,24 @@ export default function ContractPage() {
     });
 
     const data = await response.json();
-    setAnalysisResult(data.result || "Cevap alınamadı.");
     setLoading(false);
+    setAnalysisResult(data.result || "Cevap alınamadı.");
   };
 
   const renderResultCards = () => {
-    if (!analysisResult) return null;
+    if (!analysisResult || loading) return null;
 
-    const pattern = /Madde\s*\d+:/g;
-    const splitResult = analysisResult.split(pattern).filter(Boolean);
-    const headers = analysisResult.match(pattern) || [];
+    // Her maddeyi "Madde 1:" ile başlayan bloklara ayır
+    const items = analysisResult.split(/(?=Madde \d+:)/g);
 
     return (
-      <div className="mt-6 space-y-4">
-        {splitResult.map((content, index) => (
+      <div className="mt-6 space-y-6">
+        {items.map((item, index) => (
           <div
             key={index}
-            className="bg-white border-l-4 border-blue-600 p-4 shadow rounded-xl"
+            className="bg-white border-l-4 border-blue-600 p-4 shadow rounded-xl whitespace-pre-line"
           >
-            <p className="text-gray-800 whitespace-pre-line">
-              {headers[index]}{":\n"}{content.trim()}
-            </p>
+            {item.trim()}
           </div>
         ))}
       </div>
@@ -55,10 +55,9 @@ export default function ContractPage() {
       <div className="text-center">
         <button
           onClick={handleAnalyze}
-          disabled={loading}
-          className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 transition-all disabled:opacity-50"
+          className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-xl shadow hover:bg-blue-700 transition-all"
         >
-          {loading ? "Analiz ediliyor, lütfen bekleyiniz..." : "Analiz Et"}
+          {loading ? "Analiz Ediliyor..." : "Analiz Et"}
         </button>
       </div>
 
