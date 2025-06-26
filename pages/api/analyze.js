@@ -10,31 +10,47 @@ export default async function handler(req, res) {
   }
 
   const prompt = `
-Aşağıda verilen sözleşme maddelerini tek tek analiz et. Her bir madde için sırasıyla şu şekilde çıktı ver:
+Aşağıda verilen sözleşme maddelerini tek tek analiz et. Her bir madde için çıktıyı şu formatta oluştur:
 
-1. Madde İçeriği: (maddenin kendisini yaz)
-2. Hukuki Değerlendirme: Maddenin anlamını açıkla.
-3. Uygunluk Etiketi: Bu madde Türk hukukuna göre uygun mu, riskli mi, yoksa geçersiz mi? Sadece birini seç ve başına simgesini koy:
+---
+Madde [numara]:
+Madde İçeriği: (maddenin tam metni)
+Hukuki Değerlendirme: Maddenin anlamını ve yaratabileceği sorunları açıkla.
+🔎 Uygunluk Etiketi: Sadece birini seç:
    ✅ Uygun Madde
    🟡 Riskli Madde
    🔴 Geçersiz Madde
-4. Gerekçe: Neden böyle olduğunu açıkla.
-5. Kanuni Dayanak: Türk Borçlar Kanunu, Anayasa, İş Kanunu gibi mevzuatlardan ilgili maddeyi belirt (örn: “TBK m. 26 - Ahlaka aykırılık”).
+Gerekçe: Kısa ama net şekilde neden böyle olduğunu açıklayın.
+Kanuni Dayanak: Aşağıdaki kanunlardan ilgili olanı ve madde numarasını net şekilde belirt:
+- Türk Borçlar Kanunu (TBK)
+- İş Kanunu
+- Anayasa
+- Türk Medeni Kanunu (TMK)
+- Türk Ticaret Kanunu (TTK)
+- Tüketicinin Korunması Hakkında Kanun
+- Türk Ceza Kanunu (TCK)
 
-Örnek format:
+Örnek:
 ---
 Madde 1:
 Madde İçeriği: [metin]
 Hukuki Değerlendirme: [...]
-🟡 Riskli Madde
+🔴 Geçersiz Madde
 Gerekçe: [...]
-Kanuni Dayanak: Türk Borçlar Kanunu m. [...]
+Kanuni Dayanak: İş Kanunu m. 41 - Fazla Çalışma
+
 ---
-Açıklamalar sade, net ve anlaşılır olmalıdır. Gereksiz tekrar ya da genel ifadeler kullanma. 
-Sadece analiz et ve çıktıyı yukarıdaki formatta oluştur.
+Kurallar:
+- Her maddenin değerlendirmesini bu formatta yap.
+- Gereksiz tekrar yapma.
+- Sadece analiz et, öneri verme.
+- Maddeler arasında boşluk bırak ve sıralı yaz.
+
+Analiz edilecek sözleşme metni:
 `;
 
-  const fullPrompt = `${prompt}\n\n${contractText}`;
+
+   const fullPrompt = `${prompt}\n\n${contractText}`;
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
