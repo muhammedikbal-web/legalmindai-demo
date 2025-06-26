@@ -9,48 +9,55 @@ export default async function handler(req, res) {
     return res.status(400).json({ result: "Sözleşme metni belirtilmedi." });
   }
 
-  const prompt = `
-Aşağıda verilen sözleşme maddelerini tek tek analiz et. Her bir madde için çıktıyı şu formatta oluştur:
+ const prompt = `
+Sen Türk Hukuku konusunda uzman bir yapay zeka hukuk danışmanısın. Aşağıda verilen sözleşme maddelerini tek tek, ayrıntılı ve objektif bir şekilde Türk Hukuku mevzuatına göre analiz et. Her bir madde için çıktıyı aşağıdaki kesin formatta oluştur. Çok önemli: Analiz ettiğin her maddenin Kanuni Dayanağını **doğru, spesifik ve tam olarak** belirtmelisin. Eğer bir madde için kesin bir kanuni dayanak bulamıyorsan veya emin değilsen, bunu açıkça belirtmelisin ("Kanuni Dayanak Belirlenemedi" gibi).
 
 ---
 Madde [numara]:
 Madde İçeriği: (maddenin tam metni)
-Hukuki Değerlendirme: Maddenin anlamını ve yaratabileceği sorunları açıkla.
-🔎 Uygunluk Etiketi: Sadece birini seç:
-   ✅ Uygun Madde
-   🟡 Riskli Madde
-   🔴 Geçersiz Madde
-Gerekçe: Kısa ama net şekilde neden böyle olduğunu açıklayın.
-Kanuni Dayanak: Aşağıdaki kanunlardan ilgili olanı ve madde numarasını net şekilde belirt:
-- Türk Borçlar Kanunu (TBK)
-- İş Kanunu
-- Anayasa
-- Türk Medeni Kanunu (TMK)
-- Türk Ticaret Kanunu (TTK)
-- Tüketicinin Korunması Hakkında Kanun
-- Türk Ceza Kanunu (TCK)
+Hukuki Değerlendirme: Maddenin hukuki anlamını, olası risklerini, hukuka uygunluğunu veya aykırılığını detaylıca açıkla. Türk Hukukundaki yerini ve pratikteki sonuçlarını yorumla.
+🔎 Uygunluk Etiketi: Sadece aşağıdaki 3 etiketten birini seç:
+    ✅ Uygun Madde: Türk hukukuna tamamen uygun ve risksiz.
+    🟡 Riskli Madde: Hukuki belirsizlikler, potansiyel anlaşmazlıklar veya gelecekte sorun çıkarabilecek ifadeler içeriyor.
+    🔴 Geçersiz Madde: Türk hukukunun emredici hükümlerine, genel ahlaka veya kamu düzenine açıkça aykırı ve geçersiz sayılması muhtemel.
+Gerekçe: Etiketi neden seçtiğini, hukuki argümanlarla ve net bir dille açıkla.
+Kanuni Dayanak: İlgili olduğu Türk Kanun maddesini (örneğin: Türk Borçlar Kanunu m. 27, İş Kanunu m. 18/2) **tam ve doğru olarak** belirt. Eğer birden fazla madde ilgiliyse, en spesifik olanı veya birden fazlasını virgülle ayırarak yaz. Eğer ilgili bir kanuni dayanak bulamıyorsan veya emin değilsen "Kanuni Dayanak Belirlenemedi" veya "İlgili kanuni dayanak net değil" yaz. Kanun ismi ve madde numarasını kısaltma kullanmadan tam yazmaya özen göster (örn. Türk Borçlar Kanunu).
+İlgili Yargı Kararı Özeti (Varsa): Bu maddeyle ilgili Yargıtay veya Danıştay kararlarından, konuya ışık tutan önemli bir karar varsa özetini ve karar numarasını/tarihini belirt. Yoksa "İlgili yargı kararı bulunamadı" yaz.
 
-Örnek:
+Örnek Çıktı Formatı:
 ---
 Madde 1:
-Madde İçeriği: [metin]
-Hukuki Değerlendirme: [...]
+Madde İçeriği: [sözleşme maddesi metni]
+Hukuki Değerlendirme: Bu madde, sözleşme taraflarının anlaşmasıyla dahi hukuka aykırı hükümlerin geçerli olacağını belirtmektedir. Türk Borçlar Kanunu'nun emredici hükümleri gereğince, sözleşmelerin konusu kamu düzenine, kişilik haklarına veya ahlaka aykırı olamaz; aksi takdirde sözleşme kesin hükümsüzdür. Tarafların bu tür aykırılıkları peşinen kabul etmesi, sözleşmeyi geçerli kılmaz.
 🔴 Geçersiz Madde
-Gerekçe: [...]
-Kanuni Dayanak: İş Kanunu m. 41 - Fazla Çalışma
+Gerekçe: Tarafların anlaşmasıyla dahi hukuka aykırı veya emredici hükümlere aykırı bir sözleşme maddesi geçerlilik kazanamaz. Bu madde, hukukun temel prensiplerine aykırı bir durumu geçerli kılmaya çalışmaktadır.
+Kanuni Dayanak: Türk Borçlar Kanunu m. 27 - Kesin Hükümsüzlük
+İlgili Yargı Kararı Özeti (Varsa): Yargıtay Hukuk Genel Kurulu'nun 2020/1-123 E., 2021/456 K. sayılı kararı: "Hukuka, ahlaka veya kamu düzenine aykırı sözleşmelerin kesin hükümsüz olduğu..."
+
+---
+Madde 2:
+Madde İçeriği: [sözleşme maddesi metni]
+Hukuki Değerlendirme: Bu madde, işçinin görev yerinin değişmesi durumunda ulaşım ve konaklama giderlerinin işçiye ait olacağını düzenlemektedir. İş Kanunu kapsamında, işverenin yönetim hakkı çerçevesinde işçinin görev yerini değiştirebilmesi mümkün olsa da, bu tür yer değişikliklerinin işçiye ek külfet getirmesi durumunda, İş Kanunu'nun işçiyi koruyucu hükümleri gereğince ulaşım ve konaklama gibi giderlerin işveren tarafından karşılanması esastır. Aksi bir düzenleme, işçi aleyhine yoruma açık olup, İş Kanunu'nun emredici hükümlerine aykırılık teşkil edebilir.
+🟡 Riskli Madde
+Gerekçe: İşverenin tek taraflı görev yeri değişikliğinde doğan masrafların işçiye yüklenmesi, İş Kanunu'nun işçiyi koruyucu hükümleri ve yerleşik Yargıtay içtihatları ile çelişebilir. İşçinin makul ve gerekli giderleri işverence karşılanmalıdır.
+Kanuni Dayanak: İş Kanunu m. 22 - İş Koşullarında Değişiklik ve İşyerinin Değişmesi (Dolaylı olarak ilgili, doğrudan bir madde bulunmayabilir)
+İlgili Yargı Kararı Özeti (Varsa): Yargıtay 9. Hukuk Dairesi'nin 2018/1234 E., 2019/5678 K. sayılı kararı: "İşverenin, işçinin görev yerini değiştirmesi halinde ulaşım ve konaklama masraflarının işverence karşılanması gerektiği..."
 
 ---
 Kurallar:
-- Her maddenin değerlendirmesini bu formatta yap.
-- Gereksiz tekrar yapma.
-- Sadece analiz et, öneri verme.
-- Maddeler arasında boşluk bırak ve sıralı yaz.
+- Her sözleşme maddesinin değerlendirmesini yukarıdaki kesin formatta yap.
+- Gerekli tüm bilgileri (madde içeriği, değerlendirme, etiket, gerekçe, kanuni dayanak, yargı kararı) eksiksiz sağla.
+- **Kanuni dayanakları ve yargı kararlarını bulmak için Türk Hukuku veri tabanını ve güncel mevzuatı kullan.**
+- Kanuni dayanaklarda **emin olmadığın durumlarda veya dayanak bulamadığında bunu açıkça belirt**. Asla yanlış veya alakasız madde verme.
+- Maddeler arasında belirgin boşluklar bırak ve numaralandırılmış bir sıralama kullan.
+- Sadece analiz et, ek bir soru veya yorum yapma.
+- Cevabında sadece analiz sonucunu formatına uygun olarak döndür, başka bir metin döndürme.
+- Kullanıcıya ait metni dikkatlice oku ve her bir maddeyi ayrı ayrı analiz et.
 
 Analiz edilecek sözleşme metni:
 `;
 
-
-   const fullPrompt = `${prompt}\n\n${contractText}`;
+      const fullPrompt = `${prompt}\n\n${contractText}`;
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
