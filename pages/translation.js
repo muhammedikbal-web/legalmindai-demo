@@ -1,16 +1,23 @@
-import { useState } from "react"; // useState hook'unu ekliyoruz
+import { useState } from "react";
 
 export default function TranslationPage() {
-  const [inputText, setInputText] = useState(""); // Kullanıcının gireceği İngilizce metin
-  const [translatedText, setTranslatedText] = useState(""); // Çevrilmiş Türkçe metin
-  const [loading, setLoading] = useState(false); // Yüklenme durumu için
+  const [inputText, setInputText] = useState("");
+  const [translatedText, setTranslatedText] = useState("");
+  const [analysisResult, setAnalysisResult] = useState(""); // Analiz sonucunu tutmak için yeni state
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(""); // Hata mesajları için
 
-  const handleTranslate = async () => {
-    if (!inputText.trim()) return; // Metin boşsa işlem yapma
+  const handleTranslateAndAnalyze = async () => {
+    if (!inputText.trim()) {
+      setError("Lütfen çevrilecek metni girin.");
+      return;
+    }
 
-    setLoading(true); // Yükleniyor durumunu başlat
+    setLoading(true);
+    setTranslatedText(""); // Önceki sonuçları temizle
+    setAnalysisResult(""); // Önceki analiz sonuçlarını temizle
+    setError("");
 
-    // Çeviri prompt'umuz
     const translationPrompt = `
       You are an expert legal translator specializing in Turkish legal terminology. Your task is to accurately and precisely translate the following English service agreement, which is prepared in accordance with Turkish Law, into Turkish.
 
@@ -24,52 +31,73 @@ export default function TranslationPage() {
       Below is the Service Agreement to be translated:
       `;
 
-    const fullTranslationPrompt = `${translationPrompt}\n\n${inputText}`; // Prompt ile kullanıcı metnini birleştir
-
     try {
-      // /api/translate endpoint'ine istek göndereceğiz.
-      // Henüz bu endpoint'i oluşturmadık, ama backend'de böyle bir endpoint olacağını varsayıyoruz.
-      const res = await fetch("/api/translate", {
+      const res = await fetch("/api/translate", { // `/api/translate` endpoint'ine tek istek
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ textToTranslate: inputText, prompt: fullTranslationPrompt }),
+        body: JSON.stringify({ textToTranslate: inputText, prompt: translationPrompt }),
       });
 
       const data = await res.json();
-      setTranslatedText(data.result || "Çeviri alınamadı."); // Sonucu state'e kaydet
+
+      if (res.ok) { // İstek başarılıysa
+        setTranslatedText(data.translatedText); // Çevrilen metni al
+        setAnalysisResult(data.analysisResult); // Analiz sonucunu al
+      } else {
+        setError(data.error || "Beklenmedik bir hata oluştu.");
+      }
     } catch (err) {
       console.error(err);
-      setTranslatedText("Çeviri sırasında bir hata oluştu."); // Hata durumunu yönet
+      setError("Sunucuya bağlanırken bir hata oluştu.");
     }
 
-    setLoading(false); // Yükleniyor durumunu bitir
+    setLoading(false);
   };
 
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold mb-4">Hukuki Çeviri</h1>
+    <div className="p-6 max-w-4xl mx-auto">
+      <h1 className="text-3xl font-bold mb-6 text-purple-800">Hukuki Çeviri ve Otomatik Analiz</h1>
 
       <textarea
         value={inputText}
         onChange={(e) => setInputText(e.target.value)}
-        placeholder="Lütfen çevirmek istediğiniz İngilizce sözleşme metnini buraya yapıştırın..."
-        className="w-full h-60 p-4 border border-gray-300 rounded-xl shadow mb-4"
+        placeholder="Lütfen çevirmek ve analiz etmek istediğiniz İngilizce sözleşme metnini buraya yapıştırın..."
+        className="w-full h-60 p-4 border border-gray-300 rounded-xl shadow-inner focus:ring-2 focus:ring-purple-200 outline-none transition-all duration-200 mb-4 text-lg"
       ></textarea>
 
       <button
-        onClick={handleTranslate}
+        onClick={handleTranslateAndAnalyze}
         disabled={loading || !inputText.trim()}
-        className="bg-purple-600 text-white px-6 py-2 rounded-xl shadow hover:bg-purple-700 transition-all duration-300 disabled:opacity-50"
+        className="bg-purple-600 text-white px-8 py-3 rounded-xl shadow-lg hover:bg-purple-700 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed text-lg font-semibold"
       >
-        {loading ? "Çevriliyor..." : "Çevir"}
+        {loading ? "Çevriliyor ve Analiz Ediliyor..." : "Çevir ve Analiz Et"}
       </button>
 
-      {translatedText && (
-        <div className="mt-6 p-4 bg-white border border-gray-300 rounded-xl shadow">
-          <h2 className="text-xl font-semibold mb-2">Çeviri Sonucu:</h2>
-          <pre className="whitespace-pre-wrap text-gray-800">{translatedText}</pre>
+      {error && (
+        <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+          {error}
+        </div>
+      )}
+
+      {loading && (
+          <div className="mt-6 text-center text-purple-600 text-lg">
+              Yükleniyor, lütfen bekleyiniz...
+          </div>
+      )}
+
+      {!loading && translatedText && (
+        <div className="mt-8 p-6 bg-white border border-gray-200 rounded-xl shadow-xl">
+          <h2 className="text-2xl font-semibold mb-4 text-purple-700">Çeviri Sonucu:</h2>
+          <pre className="whitespace-pre-wrap text-gray-800 text-base leading-relaxed">{translatedText}</pre>
+        </div>
+      )}
+
+      {!loading && analysisResult && (
+        <div className="mt-8 p-6 bg-white border border-gray-200 rounded-xl shadow-xl">
+          <h2 className="text-2xl font-semibold mb-4 text-purple-700">Hukuki Analiz Sonucu:</h2>
+          <pre className="whitespace-pre-wrap text-gray-800 text-base leading-relaxed">{analysisResult}</pre>
         </div>
       )}
     </div>
