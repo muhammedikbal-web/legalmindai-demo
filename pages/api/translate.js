@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   }
 
   let translatedText = "";
-  let analysisResult = []; // analysisResult'ı başlangıçta boş dizi yapalım
+  let analysisResult = [];
 
   try {
     // Adım 1: İngilizce metni Türkçe'ye çevir
@@ -32,16 +32,22 @@ export default async function handler(req, res) {
     const translateData = await translateResponse.json();
     translatedText = translateData.choices?.[0]?.message?.content || "Çeviri alınamadı.";
 
-    // Hukuki analiz için kullanılacak prompt (Daha keskin, satır sonu vurgusu eklendi)
+    // Hukuki analiz için kullanılacak prompt (En son ve en agresif hali)
     const analysisPrompt = `
-      Aşağıdaki sözleşme metnindeki her bir maddeyi ayrı ayrı ve tam metniyle dikkate alarak analiz et. Türk Hukuku mevzuatına göre uygunluğunu, risklerini veya geçersizliğini değerlendir.
-      Her bir madde için aşağıdaki kesin JSON objesi formatında bir çıktı oluştur ve tüm bu objeleri bir JSON dizisi (array) içine al.
-      Çıktın **sadece ve sadece geçerli bir JSON dizisi** olmalı. JSON dışında hiçbir ek metin, açıklama, başlık veya giriş/çıkış cümlesi KULLANMA.
-      JSON objelerindeki "maddeIcerigi", "hukukiDegerlendirme", "gerekce", "kanuniDayanak", "yargiKarariOzeti", "onerilenRevizeMadde" alanlarındaki metinlerin **içinde mantıklı ve okunabilir satır sonları (\\n) bulundur**. Bu, metinlerin daha düzenli görünmesini sağlayacaktır.
+      Sen, sözleşme maddelerini Türk Hukuku'na göre detaylıca analiz eden bir uzmansın.
+      Aşağıdaki sözleşme metnini her bir "Madde X" veya benzeri ifadeyi ayrı bir madde olarak kabul ederek **tek tek ve tam metinleriyle analiz et.**
+      Analiz sonucunu, her bir maddenin aşağıdaki kesin JSON objesi formatında olduğu bir JSON dizisi (array) olarak döndür.
+      
+      **Çok Önemli Kurallar:**
+      1. Çıktı, **sadece ve sadece geçerli bir JSON dizisi olmalı.** JSON dışında hiçbir harf, sayı, kelime, cümle, başlık veya açıklama ekleme.
+      2. JSON içindeki tüm metin alanları (maddeIcerigi, hukukiDegerlendirme, gerekce, yargiKarariOzeti, onerilenRevizeMadde), **mantıklı ve okunabilir satır sonları (\\n) içermeli.** Bu, metinlerin daha düzgün görünmesini sağlayacak.
+      3. Her maddeyi ayrı bir JSON objesi olarak işle. Metindeki tüm maddeler JSON çıktısında yer almalı.
+      4. Kanuni Dayanak için: Doğru, spesifik ve tam kanun maddesi (örn: Türk Borçlar Kanunu m. 27). Emin değilsen "Kanuni Dayanak Belirlenemedi" veya ilgili hukuki ilke (örn: Sözleşme Serbestisi İlkesi) kullan. Asla yanlış madde verme.
+      5. Uygunluk Etiketi için sadece: "✅ Uygun Madde", "🟡 Riskli Madde", "🔴 Geçersiz Madde" etiketlerinden birini kullan.
 
-      JSON Objesi Yapısı:
+      **JSON Objesi Yapısı:**
       {
-        "maddeNo": [madde numarası, örn: 1],
+        "maddeNo": [madde numarası, örn: 1 veya string olarak "Hizmet Sözleşmesi"],
         "maddeBaslik": [varsa maddenin başlığı, yoksa boş string],
         "maddeIcerigi": [maddenin tam metni ve içinde satır sonları olmalı],
         "hukukiDegerlendirme": [Detaylı hukuki değerlendirme ve içinde satır sonları olmalı],
@@ -52,11 +58,7 @@ export default async function handler(req, res) {
         "onerilenRevizeMadde": [Riskli veya Geçersiz ise Türk hukukuna uygun revize edilmiş madde metni. Uygunsa "Revize gerekmiyor." ve içinde satır sonları olmalı]
       }
 
-      Önemli Kurallar:
-      1. Kanuni dayanakları doğru, spesifik ve tam olarak belirt. Emin değilsen genel ilke veya "Kanuni Dayanak Belirlenemedi" kullan.
-      2. uygunlukEtiketi için yalnızca yukarıdaki 3 etiketi kullan.
-      3. Çıktının tamamen geçerli bir JSON dizisi olduğundan emin ol.
-      4. Analiz edilecek metin:
+      Analiz edilecek sözleşme metni:
       `;
 
     // Adım 2: Çevrilen Türkçe metni analiz et
@@ -71,9 +73,9 @@ export default async function handler(req, res) {
         messages: [
           {
             role: "system",
-            content: "Sen bir hukuk uzmanısın. Kullanıcının verdiği sözleşme metnini maddelere ayırarak, her bir maddeyi Türk Hukuku'na göre detaylıca analiz et. Çıktıyı kesinlikle belirtilen JSON formatında ve sadece JSON olarak ver. JSON dışına hiçbir karakter veya metin ekleme."
+            content: "Senin görevin, kullanıcının verdiği sözleşme metnini maddelere ayırarak, her bir maddeyi Türk Hukuku'na göre detaylıca analiz etmek ve çıktıyı kesinlikle belirtilen JSON formatında, hiçbir ek karakter veya metin olmadan döndürmektir."
           },
-          { role: "user", content: `${analysisPrompt}\n${translatedText}` } // Prompt ile metni birleştir
+          { role: "user", content: `${analysisPrompt}\n${translatedText}` }
         ],
         temperature: 0.2,
         response_format: { type: "json_object" }
@@ -98,10 +100,9 @@ export default async function handler(req, res) {
         // Eğer model tek bir obje döndürürse, onu diziye saralım.
         if (!Array.isArray(analysisResult)) {
             if (typeof analysisResult === 'object' && analysisResult !== null && Object.keys(analysisResult).length > 0) {
-                // Eğer tek bir madde analizi objesi geldiyse, onu diziye dönüştür.
                 analysisResult = [analysisResult];
             } else {
-                analysisResult = []; // Hala bir dizi değilse, boş dizi ata
+                analysisResult = [];
             }
         }
 
