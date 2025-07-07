@@ -32,23 +32,24 @@ export default async function handler(req, res) {
     const translateData = await translateResponse.json();
     translatedText = translateData.choices?.[0]?.message?.content || "Çeviri alınamadı.";
 
-    // Hukuki analiz için kullanılacak prompt (Markdown biçimlendirmeleri kaldırıldı)
+    // Hukuki analiz için kullanılacak prompt (Daha keskin, satır sonu vurgusu eklendi)
     const analysisPrompt = `
-      Aşağıdaki sözleşme metnindeki her bir maddeyi ayrı ayrı analiz ederek, Türk Hukuku mevzuatına göre uygunluğunu, risklerini veya geçersizliğini değerlendir.
-      Her bir madde için aşağıdaki JSON objesi formatında bir çıktı oluştur ve tüm bu objeleri bir JSON dizisi (array) içine al.
-      Sadece JSON çıktısı döndür, JSON dışında hiçbir açıklama, giriş veya çıkış cümlesi ekleme.
+      Aşağıdaki sözleşme metnindeki her bir maddeyi ayrı ayrı ve tam metniyle dikkate alarak analiz et. Türk Hukuku mevzuatına göre uygunluğunu, risklerini veya geçersizliğini değerlendir.
+      Her bir madde için aşağıdaki kesin JSON objesi formatında bir çıktı oluştur ve tüm bu objeleri bir JSON dizisi (array) içine al.
+      Çıktın **sadece ve sadece geçerli bir JSON dizisi** olmalı. JSON dışında hiçbir ek metin, açıklama, başlık veya giriş/çıkış cümlesi KULLANMA.
+      JSON objelerindeki "maddeIcerigi", "hukukiDegerlendirme", "gerekce", "kanuniDayanak", "yargiKarariOzeti", "onerilenRevizeMadde" alanlarındaki metinlerin **içinde mantıklı ve okunabilir satır sonları (\\n) bulundur**. Bu, metinlerin daha düzenli görünmesini sağlayacaktır.
 
       JSON Objesi Yapısı:
       {
         "maddeNo": [madde numarası, örn: 1],
         "maddeBaslik": [varsa maddenin başlığı, yoksa boş string],
-        "maddeIcerigi": [maddenin tam metni],
-        "hukukiDegerlendirme": [Maddenin hukuki anlamını, olası risklerini, hukuka uygunluğunu veya aykırılığını detaylıca açıkla. Türk Hukukundaki yerini ve pratikteki sonuçlarını yorumla.],
+        "maddeIcerigi": [maddenin tam metni ve içinde satır sonları olmalı],
+        "hukukiDegerlendirme": [Detaylı hukuki değerlendirme ve içinde satır sonları olmalı],
         "uygunlukEtiketi": ["✅ Uygun Madde", "🟡 Riskli Madde", "🔴 Geçersiz Madde" etiketlerinden biri],
-        "gerekce": [Etiketi neden seçtiğini, hukuki argümanlarla ve net bir dille açıkla.],
+        "gerekce": [Gerekçe ve içinde satır sonları olmalı],
         "kanuniDayanak": [İlgili Kanun/Madde (örn: Türk Borçlar Kanunu m. 27), veya "Kanuni Dayanak Belirlenemedi" veya "Sözleşme Serbestisi İlkesi" gibi genel ilkeler],
-        "yargiKarariOzeti": [İlgili Yargıtay/Danıştay kararı özeti ve numarası/tarihi. Yoksa "İlgili yargı kararı bulunamadı."],
-        "onerilenRevizeMadde": [Riskli veya Geçersiz ise Türk hukukuna uygun revize edilmiş madde metni. Uygunsa "Revize gerekmiyor."]
+        "yargiKarariOzeti": [İlgili Yargıtay/Danıştay kararı özeti ve numarası/tarihi. Yoksa "İlgili yargı kararı bulunamadı." ve içinde satır sonları olmalı],
+        "onerilenRevizeMadde": [Riskli veya Geçersiz ise Türk hukukuna uygun revize edilmiş madde metni. Uygunsa "Revize gerekmiyor." ve içinde satır sonları olmalı]
       }
 
       Önemli Kurallar:
@@ -74,8 +75,8 @@ export default async function handler(req, res) {
           },
           { role: "user", content: `${analysisPrompt}\n${translatedText}` } // Prompt ile metni birleştir
         ],
-        temperature: 0.2, // Analizde daha tutarlı ve kesin yanıtlar için sıcaklığı biraz daha düşürdük
-        response_format: { type: "json_object" } // Modelden doğrudan JSON objesi istiyoruz
+        temperature: 0.2,
+        response_format: { type: "json_object" }
       }),
     });
 
@@ -93,11 +94,14 @@ export default async function handler(req, res) {
             console.warn("Modelden gelen analiz sonucu beklenen formatta değil (boş/tanımsız):", rawAnalysisContent);
         }
 
+        // Gelen JSON'un bir dizi olduğundan emin olalım.
+        // Eğer model tek bir obje döndürürse, onu diziye saralım.
         if (!Array.isArray(analysisResult)) {
             if (typeof analysisResult === 'object' && analysisResult !== null && Object.keys(analysisResult).length > 0) {
+                // Eğer tek bir madde analizi objesi geldiyse, onu diziye dönüştür.
                 analysisResult = [analysisResult];
             } else {
-                analysisResult = [];
+                analysisResult = []; // Hala bir dizi değilse, boş dizi ata
             }
         }
 
