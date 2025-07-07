@@ -118,6 +118,8 @@ export default async function handler(req, res) {
     // ...
   }
 ]
+```
+` 
       Analiz edilecek sözleşme metni:
       `;
 
