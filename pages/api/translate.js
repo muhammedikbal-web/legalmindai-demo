@@ -97,7 +97,27 @@ export default async function handler(req, res) {
       - Maddeler arasında belirgin boşluklar bırak ve numaralandırılmış bir sıralama kullan.
       - Sadece analiz sonucunu formatına uygun olarak döndür, başka bir metin döndürme.
       - Kullanıcıya ait metni dikkatlice oku ve her bir maddeyi ayrı ayrı analiz et.
-
+- Lütfen analiz sonucunu, her bir maddenin aşağıdaki yapıya sahip bir JSON objesi olduğu ve tüm objelerin bir dizi (array) içinde yer aldığı bir JSON formatında döndür. JSON çıktısı dışında başka hiçbir metin (açıklama, giriş/çıkış cümlesi vb.) içermemelidir.
+- JSON çıktısı şu anahtarları içermelidir: "maddeNo", "maddeIcerigi", "hukukiDegerlendirme", "uygunlukEtiketi", "gerekce", "kanuniDayanak", "yargiKarariOzeti", "onerilenRevizeMadde".
+- Örnek JSON Formatı:
+```json
+[
+  {
+    "maddeNo": 1,
+    "maddeIcerigi": "...",
+    "hukukiDegerlendirme": "...",
+    "uygunlukEtiketi": "...",
+    "gerekce": "...",
+    "kanuniDayanak": "...",
+    "yargiKarariOzeti": "...",
+    "onerilenRevizeMadde": "..."
+  },
+  {
+    "maddeNo": 2,
+    "maddeIcerigi": "...",
+    // ...
+  }
+]
       Analiz edilecek sözleşme metni:
       `;
 
