@@ -3,7 +3,7 @@ import { useState } from "react";
 export default function TranslationPage() {
   const [inputText, setInputText] = useState("");
   const [translatedText, setTranslatedText] = useState("");
-  const [analysisResult, setAnalysisResult] = useState(""); // Analiz sonucunu tutmak için yeni state
+  const [analysisResult, setAnalysisResult] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(""); // Hata mesajları için
 
@@ -14,7 +14,23 @@ export default function TranslationPage() {
     }
 
     setLoading(true);
-    setTranslatedText(""); // Önceki sonuçları temizle
+    setTranslatedText(data.translatedText);
+try {
+    // API'den gelen analysisResult'ın doğru bir array olduğundan emin olalım
+    // Eğer API'den null veya undefined gelirse, boş bir array atarız.
+    // Eğer hala bir string gelirse, parse etmeye çalışırız.
+    let parsedResult = data.analysisResult;
+    if (typeof data.analysisResult === 'string') {
+        parsedResult = JSON.parse(data.analysisResult);
+    }
+
+    // Eğer parse sonrası hala array değilse veya null ise boş array kullan.
+    setAnalysisResult(Array.isArray(parsedResult) ? parsedResult : []);
+
+} catch (parseError) {
+    console.error("Frontend'de analiz sonucu ayrıştırılırken hata:", parseError);
+    setAnalysisResult([]); // Hata durumunda boş array ata
+}
     setAnalysisResult(""); // Önceki analiz sonuçlarını temizle
     setError("");
 
@@ -94,12 +110,13 @@ export default function TranslationPage() {
         </div>
       )}
 
-      {!loading && analysisResult && (
-        <div className="mt-8 p-6 bg-white border border-gray-200 rounded-xl shadow-xl">
-          <h2 className="text-2xl font-semibold mb-4 text-purple-700">Hukuki Analiz Sonucu:</h2>
-          <pre className="whitespace-pre-wrap text-gray-800 text-base leading-relaxed">{analysisResult}</pre>
-        </div>
-      )}
+      {analysisResult.length > 0 && (
+    <div className="mt-4 p-4 border rounded-md bg-gray-50">
+        <h3 className="text-lg font-semibold mb-2">Hukuki Analiz Sonucu:</h3>
+        {/* Geçici olarak, sadece analysisResult'ın string'e dönüştürülmüş halini gösterelim */}
+        {/* Bu, array gelse de, string gelse de hata vermez. */}
+        <pre>{JSON.stringify(analysisResult, null, 2)}</pre>
+        {/* Veya daha basit: <pre>{String(analysisResult)}</pre> */}
     </div>
-  );
-}
+)}
+  
