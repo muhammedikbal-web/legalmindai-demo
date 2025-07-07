@@ -12,7 +12,7 @@ export default async function handler(req, res) {
   }
 
   let translatedText = "";
-  let analysisResult = "";
+  let analysisResult = []; // analysisResult'ı başlangıçta boş dizi yapalım
 
   try {
     // Adım 1: İngilizce metni Türkçe'ye çevir
@@ -32,40 +32,30 @@ export default async function handler(req, res) {
     const translateData = await translateResponse.json();
     translatedText = translateData.choices?.[0]?.message?.content || "Çeviri alınamadı.";
 
-    // Hukuki analiz için kullanılacak prompt
+    // Hukuki analiz için kullanılacak prompt (Daha kısa ve net)
     const analysisPrompt = `
-      Sen Türk Hukuku konusunda uzman, çözüm odaklı bir yapay zeka hukuk danışmanısın. Aşağıda verilen sözleşme maddelerini tek tek, ayrıntılı ve objektif bir şekilde Türk Hukuku mevzuatına göre analiz et. Her bir madde için çıktıyı aşağıdaki kesin formatta oluştur.
+      Aşağıdaki sözleşme metnindeki her bir maddeyi ayrı ayrı analiz ederek, Türk Hukuku mevzuatına göre uygunluğunu, risklerini veya geçersizliğini değerlendir.
+      Her bir madde için aşağıdaki JSON objesi formatında bir çıktı oluştur ve tüm bu objeleri bir JSON dizisi (array) içine al.
+      Sadece JSON çıktısı döndür, JSON dışında hiçbir açıklama, giriş veya çıkış cümlesi ekleme.
 
-      Çok Önemli Kurallar (Kanuni Dayanak İçin):
-      1. Analiz ettiğin her maddenin Kanuni Dayanağını **doğru, spesifik ve tam olarak** belirtmelisin. Kanun ismi ve madde numarasını kısaltma kullanmadan tam yazmaya özen göster (örn. Türk Borçlar Kanunu m. 27).
-      2. Eğer bir madde için **KESİN VE DOĞRUDAN İLGİLİ, TARTIŞMASIZ BİR KANUN MADDESİ** bulamıyorsan veya **KESİNLİKLE EMİN DEĞİLSEN**, **ASLA YANLIŞ, ALAKASIZ VEYA ANLAMINI TAŞIMAYAN BİR MADDE NUMARASI VERME.** Bu tür durumlarda:
-            - "Kanuni Dayanak Belirlenemedi" şeklinde belirt. VEYA
-            - İlgili genel hukuki ilkeyi (örneğin: "Sözleşme Serbestisi İlkesi", "Dürüstlük Kuralı") VEYA
-            - İlgili kanuni çerçeveyi (örneğin: "Türk Borçlar Kanunu Genel Hükümleri", "Türk Ticaret Kanunu Genel Hükümleri") belirt.
-            - Örneğin, genel fesih halleri veya bildirim süreleri gibi doğrudan tek bir kanun maddesiyle düzenlenmeyen durumlarda, genel ilkeleri veya "Türk Borçlar Kanunu Genel Hükümleri" gibi bir ifadeyi tercih et.
-      3. Kanun ismi ve madde numarasını kısaltma kullanmadan tam yazmaya özen göster (örn. Türk Borçlar Kanunu).
-      
-      ---
-      Madde [numara]:
-      Madde İçeriği: (maddenin tam metni)
-      Hukuki Değerlendirme: Maddenin hukuki anlamını, olası risklerini, hukuka uygunluğunu veya aykırılığını detaylıca açıkla. Türk Hukukundaki yerini ve pratikteki sonuçlarını yorumla.
-      🔎 Uygunluk Etiketi: Sadece aşağıdaki 3 etiketten birini seç:
-            ✅ Uygun Madde: Türk hukukuna tamamen uygun ve risksiz.
-            🟡 Riskli Madde: Hukuki belirsizlikler, potansiyel anlaşmazlıklar veya gelecekte sorun çıkarabilecek ifadeler içeriyor.
-            🔴 Geçersiz Madde: Türk hukukunun emredici hükümlerine, genel ahlaka veya kamu düzenine açıkça aykırı ve geçersiz sayılması muhtemel.
-      Gerekçe: Etiketi neden seçtiğini, hukuki argümanlarla ve net bir dille açıkla.
-      Kanuni Dayanak: [Yukarıdaki "Çok Önemli Kurallar" bölümüne göre doldurulacak. Örnek: Türk Borçlar Kanunu m. 27 - Kesin Hükümsüzlük VEYA İlgili hukuki ilke/çerçeve: Sözleşme Serbestisi İlkesi]
-      İlgili Yargı Kararı Özeti (Varsa): Bu maddeyle ilgili Yargıtay veya Danıştay kararlarından, konuya ışık tutan önemli bir karar varsa özetini ve karar numarasını/tarihini belirt. Yoksa "İlgili yargı kararı bulunamadı" yaz.
-      Önerilen Revize Madde: (Eğer Uygunluk Etiketi "🟡 Riskli Madde" veya "🔴 Geçersiz Madde" ise, bu maddenin Türk hukukuna tamamen uygun, daha açık ve risksiz hale getirilmiş revize edilmiş halini, madde numarasını koruyarak ve sözleşmenin bağlamına uygun şekilde sun. Madde uygunsa "Revize gerekmiyor" yaz.)
+      **JSON Objesi Yapısı:**
+      {
+        "maddeNo": [madde numarası, örn: 1],
+        "maddeBaslik": [varsa maddenin başlığı, yoksa boş string],
+        "maddeIcerigi": [maddenin tam metni],
+        "hukukiDegerlendirme": [Maddenin hukuki anlamını, olası risklerini, hukuka uygunluğunu veya aykırılığını detaylıca açıkla. Türk Hukukundaki yerini ve pratikteki sonuçlarını yorumla.],
+        "uygunlukEtiketi": ["✅ Uygun Madde", "🟡 Riskli Madde", "🔴 Geçersiz Madde" etiketlerinden biri],
+        "gerekce": [Etiketi neden seçtiğini, hukuki argümanlarla ve net bir dille açıkla.],
+        "kanuniDayanak": [İlgili Kanun/Madde (örn: Türk Borçlar Kanunu m. 27), veya "Kanuni Dayanak Belirlenemedi" veya "Sözleşme Serbestisi İlkesi" gibi genel ilkeler],
+        "yargiKarariOzeti": [İlgili Yargıtay/Danıştay kararı özeti ve numarası/tarihi. Yoksa "İlgili yargı kararı bulunamadı."],
+        "onerilenRevizeMadde": [Riskli veya Geçersiz ise Türk hukukuna uygun revize edilmiş madde metni. Uygunsa "Revize gerekmiyor."]
+      }
 
-      Kurallar:
-      - Her sözleşme maddesinin değerlendirmesini yukarıdaki kesin formatta yap.
-      - Gerekli tüm bilgileri (madde içeriği, değerlendirme, etiket, gerekçe, kanuni dayanak, yargı kararı, önerilen revize madde) eksiksiz sağla.
-      - Kanuni dayanakları ve yargı kararlarını bulmak için Türk Hukuku veri tabanını ve güncel mevzuatı kullan.
-      - Sadece analiz sonucunu **JSON formatında** döndür, başka hiçbir metin (açıklama, giriş/çıkış cümlesi vb.) içermemelidir.
-      - JSON çıktısı şu anahtarları içermelidir: "maddeNo", "maddeIcerigi", "hukukiDegerlendirme", "uygunlukEtiketi", "gerekce", "kanuniDayanak", "yargiKarariOzeti", "onerilenRevizeMadde".
-
-      Analiz edilecek sözleşme metni:
+      **Önemli Kurallar:**
+      1. Kanuni dayanakları **doğru, spesifik ve tam olarak** belirt. Emin değilsen genel ilke veya "Kanuni Dayanak Belirlenemedi" kullan.
+      2. `uygunlukEtiketi` için yalnızca yukarıdaki 3 etiketi kullan.
+      3. Çıktının **tamamen geçerli bir JSON dizisi** olduğundan emin ol.
+      4. Analiz edilecek metin:
       `;
 
     // Adım 2: Çevrilen Türkçe metni analiz et
@@ -80,40 +70,53 @@ export default async function handler(req, res) {
         messages: [
           {
             role: "system",
-            content: "Verilen metni analiz et ve çıktıyı istenen JSON formatında sağla. JSON çıktısı dışında başka bir metin döndürme."
+            content: "Sen bir hukuk uzmanısın. Kullanıcının verdiği sözleşme metnini maddelere ayırarak, her bir maddeyi Türk Hukuku'na göre detaylıca analiz et. Çıktıyı kesinlikle belirtilen JSON formatında ve sadece JSON olarak ver. JSON dışına hiçbir karakter veya metin ekleme."
           },
-          { role: "user", content: `${analysisPrompt}\n\n${translatedText}` }
+          { role: "user", content: `${analysisPrompt}\n${translatedText}` } // Prompt ile metni birleştir
         ],
-        temperature: 0.3,
-        response_format: { type: "json_object" } // Burası kritik: Modelden doğrudan JSON döndürmesini istiyoruz
+        temperature: 0.2, // Analizde daha tutarlı ve kesin yanıtlar için sıcaklığı biraz daha düşürdük
+        response_format: { type: "json_object" } // Modelden doğrudan JSON objesi istiyoruz
       }),
     });
 
     const analyzeData = await analyzeResponse.json();
 
-    // Modelin doğrudan JSON döndürmesini istediğimiz için, 'content' içinde bir JSON stringi bekliyoruz.
-    // Ancak bazen model dışarıya metin ekleyebilir veya JSON'ı eksik verebilir.
-    // Bu yüzden bir 'try-catch' bloğu ile güvenli parse işlemi yapalım.
     try {
-        // Modelin response_format: { type: "json_object" } ile döndüğü yer burasıdır.
-        // analysisResult artık doğrudan bir JSON objesi olacak.
-        analysisResult = analyzeData.choices?.[0]?.message?.content;
+        // response_format: { type: "json_object" } kullanıldığında,
+        // analyzeData.choices?.[0]?.message?.content doğrudan bir JavaScript objesi (JSON parse edilmiş hali) gelmelidir.
+        // Ancak yine de hata ihtimaline karşı kontrol edelim.
+        let rawAnalysisContent = analyzeData.choices?.[0]?.message?.content;
 
-        // Bazen model JSON.parse ile parse edilemeyecek ek karakterler döndürebilir.
-        // Bu yüzden güvenli bir parse işlemi yapıyoruz.
-        // Gelen content string ise ve parse edilebilirse kullanırız, değilse boş bırakırız.
-        if (typeof analysisResult === 'string') {
-            analysisResult = JSON.parse(analysisResult);
+        if (typeof rawAnalysisContent === 'string') {
+            // Nadiren de olsa model hala string döndürebilir, bu durumda parse etmeyi deneyelim.
+            analysisResult = JSON.parse(rawAnalysisContent);
+        } else if (typeof rawAnalysisContent === 'object' && rawAnalysisContent !== null) {
+            // Çoğu durumda buraya düşmeli, doğrudan obje olarak gelmeli.
+            analysisResult = rawAnalysisContent;
         } else {
-            // Eğer doğrudan JSON objesi olarak geldiyse (ki modelin hedefi bu),
-            // zaten parse etmeye gerek yok.
-            // Eğer boş veya tanımsız geldiyse, boş bir dizi atayalım.
-            analysisResult = analysisResult || [];
+            // Eğer boş veya tanımsız geldiyse, boş bir dizi ata.
+            analysisResult = [];
+            console.warn("Modelden gelen analiz sonucu beklenen formatta değil (boş/tanımsız):", rawAnalysisContent);
+        }
+
+        // Gelen JSON'un bir dizi olduğundan emin olalım.
+        // Eğer tek bir obje geldiyse (bazen model öyle dönebiliyor), onu bir diziye saralım.
+        if (!Array.isArray(analysisResult)) {
+            if (typeof analysisResult === 'object' && analysisResult !== null && Object.keys(analysisResult).length > 0) {
+                // Eğer tek bir madde analizi objesi geldiyse, onu diziye dönüştür.
+                // Madde numarası varsa kontrol edip objeyi diziye sarmalayabiliriz.
+                // Ancak amacımız her zaman bir array almak olduğundan, burada bunu dikte etmek zor.
+                // Modelin prompt'u sayesinde her zaman array dönmesi hedefleniyor.
+                // Şimdilik sadece tek obje gelirse, onu da diziye atalım
+                analysisResult = [analysisResult]; 
+            } else {
+                analysisResult = []; // Hala bir dizi değilse, boş dizi ata
+            }
         }
 
     } catch (parseError) {
-        console.error("Analiz sonucu JSON olarak ayrıştırılamadı:", parseError);
-        // Hata durumunda boş bir array dönerek frontend'in çökmesini engelleriz.
+        console.error("Analiz sonucu ayrıştırılırken veya işlenirken hata:", parseError);
+        // Hata durumunda frontend'in çökmesini engellemek için boş array ata
         analysisResult = [];
     }
     
@@ -121,7 +124,7 @@ export default async function handler(req, res) {
     res.status(200).json({ translatedText, analysisResult });
 
   } catch (error) {
-    console.error("Backend hatası:", error);
+    console.error("Backend genel hata:", error);
     res.status(500).json({ error: "Sunucu hatası: " + error.message });
   }
 }
