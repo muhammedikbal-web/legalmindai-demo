@@ -1,3 +1,5 @@
+// pages/api/analyze.js
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Only POST requests are allowed" });
@@ -6,98 +8,107 @@ export default async function handler(req, res) {
   const { contractText } = req.body;
 
   if (!contractText || contractText.trim() === "") {
-    return res.status(400).json({ result: "Sözleşme metni belirtilmedi." });
+    return res.status(400).json({ error: "Sözleşme metni belirtilmedi." }); // Hata mesajı formatını tutarlı yapalım
   }
 
-const prompt = `
-Sen Türk Hukuku konusunda uzman, çözüm odaklı bir yapay zeka hukuk danışmanısın. Aşağıda verilen sözleşme maddelerini tek tek, ayrıntılı ve objektif bir şekilde Türk Hukuku mevzuatına göre analiz et. Her bir madde için çıktıyı aşağıdaki kesin formatta oluştur.
-
-Çok Önemli Kurallar (Kanuni Dayanak İçin):
-1. Analiz ettiğin her maddenin Kanuni Dayanağını **doğru, spesifik ve tam olarak** belirtmelisin.
-2. Eğer bir madde için **KESİN VE DOĞRUDAN İLGİLİ** bir kanun maddesi bulamıyorsan veya **EMİN DEĞİLSEN**, **ASLA YANLIŞ VEYA ALAKASIZ BİR MADDE NUMARASI VERME.** Bunun yerine:
-    - "Kanuni Dayanak Belirlenemedi" şeklinde belirt. VEYA
-    - İlgili genel hukuki ilkeyi (örneğin: "Sözleşme Serbestisi İlkesi", "Dürüstlük Kuralı") VEYA
-    - İlgili kanuni çerçeveyi (örneğin: "Türk Borçlar Kanunu Genel Hükümleri", "Türk Ticaret Kanunu Genel Hükümleri") belirt.
-    - Örneğin, genel fesih halleri veya bildirim süreleri gibi doğrudan tek bir kanun maddesiyle düzenlenmeyen durumlarda, genel ilkeleri veya "Türk Borçlar Kanunu Genel Hükümleri" gibi bir ifadeyi tercih et.
-3. Kanun ismi ve madde numarasını kısaltma kullanmadan tam yazmaya özen göster (örn. Türk Borçlar Kanunu).
-
----    
-Madde [numara]:
-Madde İçeriği: (maddenin tam metni)
-Hukuki Değerlendirme: Maddenin hukuki anlamını, olası risklerini, hukuka uygunluğunu veya aykırılığını detaylıca açıkla. Türk Hukukundaki yerini ve pratikteki sonuçlarını yorumla.
-🔎 Uygunluk Etiketi: Sadece aşağıdaki 3 etiketten birini seç:
-    ✅ Uygun Madde: Türk hukukuna tamamen uygun ve risksiz.
-    🟡 Riskli Madde: Hukuki belirsizlikler, potansiyel anlaşmazlıklar veya gelecekte sorun çıkarabilecek ifadeler içeriyor.
-    🔴 Geçersiz Madde: Türk hukukunun emredici hükümlerine, genel ahlaka veya kamu düzenine açıkça aykırı ve geçersiz sayılması muhtemel.
-Gerekçe: Etiketi neden seçtiğini, hukuki argümanlarla ve net bir dille açıkla.
-Kanuni Dayanak: [Yukarıdaki "Çok Önemli Kurallar" bölümüne göre doldurulacak. Örnek: Türk Borçlar Kanunu m. 27 - Kesin Hükümsüzlük VEYA İlgili hukuki ilke/çerçeve: Sözleşme Serbestisi İlkesi]
-İlgili Yargı Kararı Özeti (Varsa): Bu maddeyle ilgili Yargıtay veya Danıştay kararlarından, konuya ışık tutan önemli bir karar varsa özetini ve karar numarasını/tarihini belirt. Yoksa "İlgili yargı kararı bulunamadı" yaz.
-Önerilen Revize Madde: (Eğer Uygunluk Etiketi "🟡 Riskli Madde" veya "🔴 Geçersiz Madde" ise, bu maddenin Türk hukukuna tamamen uygun, daha açık ve risksiz hale getirilmiş revize edilmiş halini, madde numarasını koruyarak ve sözleşmenin bağlamına uygun şekilde sun. Madde uygunsa "Revize gerekmiyor" yaz.)
-
-Örnek Çıktı Formatı:
----
-Madde 1:
-Madde İçeriği: [sözleşme maddesi metni]
-Hukuki Değerlendirme: Bu madde, sözleşme taraflarının anlaşmasıyla dahi hukuka aykırı hükümlerin geçerli olacağını belirtmektedir. Türk Borçlar Kanunu'nun emredici hükümleri gereğince, sözleşmelerin konusu kamu düzenine, kişilik haklarına veya ahlaka aykırı olamaz; aksi takdirde sözleşme kesin hükümsüzdür. Tarafların bu tür aykırılıkları peşinen kabul etmesi, sözleşmeyi geçerli kılmaz.
-🔴 Geçersiz Madde
-Gerekçe: Tarafların anlaşmasıyla dahi hukuka aykırı veya emredici hükümlere aykırı bir sözleşme maddesi geçerlilik kazanamaz. Bu madde, hukukun temel prensiplerine aykırı bir durumu geçerli kılmaya çalışmaktadır.
-Kanuni Dayanak: Türk Borçlar Kanunu m. 27 - Kesin Hükümsüzlük
-İlgili Yargı Kararı Özeti (Varsa): İlgili yargı kararı bulunamadı.
-Önerilen Revize Madde: Madde 1: Taraflar, işbu sözleşme hükümlerinin yürürlükteki kanunlara, kamu düzenine ve genel ahlaka uygun olduğunu kabul ve taahhüt ederler. Kanunlara aykırı olduğu tespit edilen hükümlerin yerine, kanuna uygun en yakın hükmün geçerli olacağı taraflarca kabul edilmiştir.
-
----
-Madde 2:
-Madde İçeriği: [sözleşme maddesi metni]
-Hukuki Değerlendirme: Bu madde, işçinin görev yerinin değişmesi durumunda ulaşım ve konaklama giderlerinin işçiye ait olacağını düzenlemektedir. İş Kanunu kapsamında, işverenin yönetim hakkı çerçevesinde işçinin görev yerini değiştirebilmesi mümkün olsa da, bu tür yer değişikliklerinin işçiye ek külfet getirmesi durumunda, İş Kanunu'nun işçiyi koruyucu hükümleri gereğince ulaşım ve konaklama gibi giderlerin işveren tarafından karşılanması esastır. Aksi bir düzenleme, işçi aleyhine yoruma açık olup, İş Kanunu'nun emredici hükümlerine aykırılık teşkil edebilir.
-🟡 Riskli Madde
-Gerekçe: İşverenin tek taraflı görev yeri değişikliğinde doğan masrafların işçiye yüklenmesi, İş Kanunu'nun işçiyi koruyucu hükümleri ve yerleşik Yargıtay içtihatları ile çelişebilir. İşçinin makul ve gerekli giderleri işverence karşılanmalıdır.
-Kanuni Dayanak: İş Kanunu m. 22 - İş Koşullarında Değişiklik ve İşyerinin Değişmesi (Dolaylı olarak ilgili, doğrudan bir madde bulunmayabilir)
-İlgili Yargı Kararı Özeti (Varsa): Yargıtay 9. Hukuk Dairesi'nin 2018/1234 E., 2019/5678 K. sayılı kararı: "İşverenin, işçinin görev yerini değiştirmesi halinde ulaşım ve konaklama masraflarının işverence karşılanması gerektiği..."
-Önerilen Revize Madde: Madde 2: B Tarafı, A Şirketi'nin talimatları doğrultusunda görev yapmayı kabul eder. Görev yerinin başka bir şehre değişmesi halinde, ulaşım ve konaklama giderleri yürürlükteki İş Kanunu hükümleri uyarınca A Şirketi tarafından karşılanır.
-
----
-Madde 3:
-Madde İçeriği: [sözleşme maddesi metni]
-Hukuki Değerlendirme: [...]
-✅ Uygun Madde
-Gerekçe: [...]
-Kanuni Dayanak: İlgili hukuki ilke/çerçeve: Sözleşme Serbestisi İlkesi / Türk Borçlar Kanunu Genel Hükümleri
-İlgili Yargı Kararı Özeti (Varsa): [...]
-Önerilen Revize Madde: Revize gerekmiyor.
-
----
-Kurallar:
-- Her sözleşme maddesinin değerlendirmesini yukarıdaki kesin formatta yap.
-- Gerekli tüm bilgileri (madde içeriği, değerlendirme, etiket, gerekçe, kanuni dayanak, yargı kararı, önerilen revize madde) eksiksiz sağla.
-- Kanuni dayanakları ve yargı kararlarını bulmak için Türk Hukuku veri tabanını ve güncel mevzuatı kullan.
-- Maddeler arasında belirgin boşluklar bırak ve numaralandırılmış bir sıralama kullan.
-- Sadece analiz sonucunu formatına uygun olarak döndür, başka bir metin döndürme.
-- Kullanıcıya ait metni dikkatlice oku ve her bir maddeyi ayrı ayrı analiz et.
-
-Analiz edilecek sözleşme metni:
-`;
-
-      const fullPrompt = `${prompt}\n\n${contractText}`;
+  let analysisResult = []; // Başlangıçta boş bir dizi olarak ayarlandı
 
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    // Hukuki analiz için kullanılacak prompt
+    const prompt = `
+      Sen Türk Hukuku konusunda uzman, çözüm odaklı bir yapay zeka hukuk danışmanısın.
+      Aşağıda verilen sözleşme metnindeki her bir "Madde X" veya benzeri ifadeyi ayrı bir madde olarak kabul ederek tek tek ve tam metinleriyle analiz et.
+      Analiz sonucunu, her bir maddenin aşağıdaki kesin JSON objesi formatında olduğu bir JSON dizisi (array) olarak döndür.
+      
+      **Çok Önemli Kurallar:**
+      1. Çıktı, **sadece ve sadece geçerli bir JSON dizisi olmalı.** JSON dışında hiçbir harf, sayı, kelime, cümle, başlık veya açıklama ekleme.
+      2. JSON içindeki tüm metin alanları ("maddeIcerigi", "hukukiDegerlendirme", "gerekce", "yargiKarariOzeti", "onerilenRevizeMadde"), **mantıklı ve okunabilir satır sonları (\\n) içermeli.** Bu, metinlerin daha düzgün görünmesini sağlayacak.
+      3. Her maddeyi ayrı bir JSON objesi olarak işle. Metindeki tüm maddeler JSON çıktısında yer almalı.
+      4. Kanuni Dayanak için: Doğru, spesifik ve tam kanun maddesi (örn: Türk Borçlar Kanunu m. 27). Emin değilsen "Kanuni Dayanak Belirlenemedi" veya ilgili hukuki ilke (örn: Sözleşme Serbestisi İlkesi) kullan. Asla yanlış madde verme.
+      5. Uygunluk Etiketi için sadece: "✅ Uygun Madde", "🟡 Riskli Madde", "🔴 Geçersiz Madde" etiketlerinden birini kullan.
+
+      **JSON Objesi Yapısı (Her madde için bir obje):**
+      [
+        {
+          "maddeNo": [madde numarası, örn: 1 veya string olarak "Giriş"],
+          "maddeBaslik": [varsa maddenin başlığı, yoksa boş string],
+          "maddeIcerigi": [maddenin tam metni ve içinde satır sonları olmalı],
+          "hukukiDegerlendirme": [Detaylı hukuki değerlendirme ve içinde satır sonları olmalı],
+          "uygunlukEtiketi": ["✅ Uygun Madde"],
+          "gerekce": [Gerekçe ve içinde satır sonları olmalı],
+          "kanuniDayanak": [İlgili Kanun/Madde (örn: Türk Borçlar Kanunu m. 27), veya "Kanuni Dayanak Belirlenemedi"],
+          "yargiKarariOzeti": [İlgili Yargıtay/Danıştay kararı özeti ve numarası/tarihi. Yoksa "İlgili yargı kararı bulunamadı." ve içinde satır sonları olmalı],
+          "onerilenRevizeMadde": [Riskli veya Geçersiz ise Türk hukukuna uygun revize edilmiş madde metni. Uygunsa "Revize gerekmiyor." ve içinde satır sonları olmalı]
+        },
+        // Diğer maddeler buraya gelecek
+      ]
+
+      Analiz edilecek sözleşme metni:
+      `;
+
+    const fullPrompt = `${prompt}\n\n${contractText}`;
+
+    const analyzeResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4",
-        messages: [{ role: "user", content: fullPrompt }],
-        temperature: 0.3,
+        model: "gpt-4o", // Daha yeni ve iyi performanslı model
+        messages: [
+          {
+            role: "system",
+            content: "Senin görevin, kullanıcının verdiği sözleşme metnini maddelere ayırarak, her bir maddeyi Türk Hukuku'na göre detaylıca analiz etmek ve çıktıyı kesinlikle belirtilen JSON formatında, hiçbir ek karakter veya metin olmadan döndürmektir."
+          },
+          { role: "user", content: fullPrompt }
+        ],
+        temperature: 0.2, // Tutarlı JSON çıktısı için düşük sıcaklık
+        response_format: { type: "json_object" } // KRİTİK: Modelden JSON obje döndürmesini istiyoruz
       }),
     });
 
-    const data = await response.json();
+    const data = await analyzeResponse.json();
 
-    const result = data.choices?.[0]?.message?.content || "Cevap alınamadı.";
-    res.status(200).json({ result });
+    // Modelin direkt JSON obje döndürmesi beklendiği için data.choices[0].message.content
+    // zaten parse edilmiş bir JS objesi/array'i olmalı.
+    // Ancak yine de hata ihtimaline karşı kontrol edelim.
+    let rawAnalysisContent = data.choices?.[0]?.message?.content;
+
+    try {
+        if (typeof rawAnalysisContent === 'string') {
+            // Nadiren de olsa model hala string döndürebilir, bu durumda parse etmeyi deneyelim.
+            analysisResult = JSON.parse(rawAnalysisContent);
+        } else if (typeof rawAnalysisContent === 'object' && rawAnalysisContent !== null) {
+            // Çoğu durumda buraya düşmeli, doğrudan obje olarak gelmeli.
+            analysisResult = rawAnalysisContent;
+        } else {
+            // Eğer boş veya tanımsız geldiyse, boş bir dizi ata.
+            analysisResult = [];
+            console.warn("Modelden gelen analiz sonucu beklenen formatta değil (boş/tanımsız):", rawAnalysisContent);
+        }
+
+        // Gelen JSON'un bir dizi olduğundan emin olalım.
+        // Eğer tek bir obje geldiyse (bazen model öyle dönebiliyor), onu bir diziye saralım.
+        if (!Array.isArray(analysisResult)) {
+            if (typeof analysisResult === 'object' && analysisResult !== null && Object.keys(analysisResult).length > 0) {
+                // Eğer tek bir madde analizi objesi geldiyse, onu diziye dönüştür.
+                analysisResult = [analysisResult]; 
+            } else {
+                analysisResult = []; // Hala bir dizi değilse, boş dizi ata
+            }
+        }
+
+    } catch (parseError) {
+        console.error("Analiz sonucu JSON olarak ayrıştırılamadı veya işlenirken hata:", parseError);
+        analysisResult = []; // Hata durumunda boş array ata
+    }
+    
+    // Frontend'in beklediği formatta analysisResult'ı gönder
+    res.status(200).json({ analysisResult });
+
   } catch (error) {
+    console.error("Backend genel hata:", error);
     res.status(500).json({ error: "Sunucu hatası: " + error.message });
   }
 }
