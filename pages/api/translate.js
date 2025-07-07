@@ -32,13 +32,13 @@ export default async function handler(req, res) {
     const translateData = await translateResponse.json();
     translatedText = translateData.choices?.[0]?.message?.content || "Çeviri alınamadı.";
 
-    // Hukuki analiz için kullanılacak prompt (Daha kısa ve net)
+    // Hukuki analiz için kullanılacak prompt (Markdown biçimlendirmeleri kaldırıldı)
     const analysisPrompt = `
       Aşağıdaki sözleşme metnindeki her bir maddeyi ayrı ayrı analiz ederek, Türk Hukuku mevzuatına göre uygunluğunu, risklerini veya geçersizliğini değerlendir.
       Her bir madde için aşağıdaki JSON objesi formatında bir çıktı oluştur ve tüm bu objeleri bir JSON dizisi (array) içine al.
       Sadece JSON çıktısı döndür, JSON dışında hiçbir açıklama, giriş veya çıkış cümlesi ekleme.
 
-      **JSON Objesi Yapısı:**
+      JSON Objesi Yapısı:
       {
         "maddeNo": [madde numarası, örn: 1],
         "maddeBaslik": [varsa maddenin başlığı, yoksa boş string],
@@ -51,10 +51,10 @@ export default async function handler(req, res) {
         "onerilenRevizeMadde": [Riskli veya Geçersiz ise Türk hukukuna uygun revize edilmiş madde metni. Uygunsa "Revize gerekmiyor."]
       }
 
-      **Önemli Kurallar:**
-      1. Kanuni dayanakları **doğru, spesifik ve tam olarak** belirt. Emin değilsen genel ilke veya "Kanuni Dayanak Belirlenemedi" kullan.
-      2. `uygunlukEtiketi` için yalnızca yukarıdaki 3 etiketi kullan.
-      3. Çıktının **tamamen geçerli bir JSON dizisi** olduğundan emin ol.
+      Önemli Kurallar:
+      1. Kanuni dayanakları doğru, spesifik ve tam olarak belirt. Emin değilsen genel ilke veya "Kanuni Dayanak Belirlenemedi" kullan.
+      2. uygunlukEtiketi için yalnızca yukarıdaki 3 etiketi kullan.
+      3. Çıktının tamamen geçerli bir JSON dizisi olduğundan emin ol.
       4. Analiz edilecek metin:
       `;
 
@@ -82,45 +82,30 @@ export default async function handler(req, res) {
     const analyzeData = await analyzeResponse.json();
 
     try {
-        // response_format: { type: "json_object" } kullanıldığında,
-        // analyzeData.choices?.[0]?.message?.content doğrudan bir JavaScript objesi (JSON parse edilmiş hali) gelmelidir.
-        // Ancak yine de hata ihtimaline karşı kontrol edelim.
         let rawAnalysisContent = analyzeData.choices?.[0]?.message?.content;
 
         if (typeof rawAnalysisContent === 'string') {
-            // Nadiren de olsa model hala string döndürebilir, bu durumda parse etmeyi deneyelim.
             analysisResult = JSON.parse(rawAnalysisContent);
         } else if (typeof rawAnalysisContent === 'object' && rawAnalysisContent !== null) {
-            // Çoğu durumda buraya düşmeli, doğrudan obje olarak gelmeli.
             analysisResult = rawAnalysisContent;
         } else {
-            // Eğer boş veya tanımsız geldiyse, boş bir dizi ata.
             analysisResult = [];
             console.warn("Modelden gelen analiz sonucu beklenen formatta değil (boş/tanımsız):", rawAnalysisContent);
         }
 
-        // Gelen JSON'un bir dizi olduğundan emin olalım.
-        // Eğer tek bir obje geldiyse (bazen model öyle dönebiliyor), onu bir diziye saralım.
         if (!Array.isArray(analysisResult)) {
             if (typeof analysisResult === 'object' && analysisResult !== null && Object.keys(analysisResult).length > 0) {
-                // Eğer tek bir madde analizi objesi geldiyse, onu diziye dönüştür.
-                // Madde numarası varsa kontrol edip objeyi diziye sarmalayabiliriz.
-                // Ancak amacımız her zaman bir array almak olduğundan, burada bunu dikte etmek zor.
-                // Modelin prompt'u sayesinde her zaman array dönmesi hedefleniyor.
-                // Şimdilik sadece tek obje gelirse, onu da diziye atalım
-                analysisResult = [analysisResult]; 
+                analysisResult = [analysisResult];
             } else {
-                analysisResult = []; // Hala bir dizi değilse, boş dizi ata
+                analysisResult = [];
             }
         }
 
     } catch (parseError) {
         console.error("Analiz sonucu ayrıştırılırken veya işlenirken hata:", parseError);
-        // Hata durumunda frontend'in çökmesini engellemek için boş array ata
         analysisResult = [];
     }
     
-    // Her iki sonucu da ön yüze gönder
     res.status(200).json({ translatedText, analysisResult });
 
   } catch (error) {
