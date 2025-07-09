@@ -123,7 +123,7 @@ export default async function handler(req, res) {
       // Örnek metinde olmayan ancak frontend'de beklenen varsayılan değerler
       // Bu kısımları GPT-4o'dan doğrudan almak yerine, burada varsayılan değerler verelim
       // veya gerekirse ayrı bir LLM çağrısı ile doldurabiliriz.
-      const gerekce = cleanedHukukiDegerlend; // Basitlik için değerlendirmeyi gerekçe yapalım
+      const gerekce = cleanedHukukiDegerlendirme; // Basitlik için değerlendirmeyi gerekçe yapalım
       const kanuniDayanak = "Kanuni Dayanak Belirlenemedi"; // Varsayılan değer
       const yargiKarariOzeti = "İlgili yargı kararı bulunamadı."; // Varsayılan değer
       const onerilenRevizeMadde = (uygunlukEtiketi === "🟡 Riskli Madde" || uygunlukEtiketi === "🔴 Geçersiz Madde") 
