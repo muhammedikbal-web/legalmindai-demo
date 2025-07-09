@@ -14,30 +14,24 @@ export default async function handler(req, res) {
   let analysisResult = [];
 
   try {
-    // Modelden sadece madde madde ayrıştırılmış metin ve kısa bir değerlendirme isteyelim.
-    // Detaylı JSON yapısını ve diğer bilgileri burada biz oluşturalım.
-    const simplifiedAnalysisPrompt = `
-      Aşağıdaki sözleşme metnini dikkatlice oku ve her bir maddeyi (başlık ve içeriğiyle birlikte) ayrı ayrı belirle.
-      Her bir madde için, önce madde numarasını ve başlığını (varsa), ardından maddenin tam içeriğini yaz.
-      Sonrasında, o maddenin Türk Hukuku'na göre kısa bir uygunluk değerlendirmesini yap ve uygunluk etiketini (✅ Uygun, 🟡 Riskli, 🔴 Geçersiz) belirt.
+    // Yeni Yaklaşım: Modelden her maddeyi "###Madde X###" ile ayırarak vermesini isteyeceğiz.
+    // Analiz detaylarını her madde bloğunun içine daha basit formatta isteyeceğiz.
+    const newSimplifiedAnalysisPrompt = `
+      Aşağıdaki sözleşme metnini dikkatlice oku. Her bir "Madde X" veya benzeri ifadeyi (örn. "Madde 1", "Madde 2", "Giriş" gibi) ayrı bir sözleşme maddesi olarak tanımla.
       
-      Çıktın aşağıdaki formatta olsun. Her madde arasında boş bir satır bırak.
+      Her bir madde için, önce maddeyi aşağıdaki özel formatta ayır: "###Madde [Numara/Adı]###".
+      Ardından, maddenin tam içeriğini yaz.
+      Sonrasında, o madde için Türk Hukuku'na göre bir hukuki değerlendirme, uygunluk etiketi ve varsa önerilen revize maddeyi aşağıdaki anahtar kelimelerle belirt:
       
-      Madde [Numara] - [Başlık]:
-      [Maddenin Tam İçeriği]
-      Değerlendirme: [Kısa Hukuki Değerlendirme]
-      Etiket: [✅ Uygun Madde | 🟡 Riskli Madde | 🔴 Geçersiz Madde]
-      
-      Örnek:
-      Madde 1 - Sözleşmenin Konusu:
-      Taraf A, Ek-1'de tanımlandığı üzere, Taraf B'ye web sitesi tasarımı ve dijital danışmanlık hizmetleri sağlamayı kabul eder.
-      Değerlendirme: Bu madde sözleşmenin konusunu açıkça belirtmektedir ve hukuken geçerlidir.
-      Etiket: ✅ Uygun Madde
-      
-      Madde 2 - Süre:
-      Bu Sözleşme, imza tarihinde yürürlüğe girecek ve 6 (altı) ay süreyle geçerli olacaktır.
-      Değerlendirme: Sözleşmenin süresi net olarak belirlenmiştir, bu da sözleşme serbestisi ilkesi kapsamında uygundur.
-      Etiket: ✅ Uygun Madde
+      Hukuki Değerlendirme: [Kısa ve öz hukuki değerlendirme]
+      Uygunluk Etiketi: [✅ Uygun Madde | 🟡 Riskli Madde | 🔴 Geçersiz Madde]
+      Önerilen Revize Madde: [Riskli veya Geçersiz ise uygun revize edilmiş madde metni. Uygunsa "Revize gerekmiyor."]
+
+      **Çok Önemli Kurallar:**
+      1. Çıktı, sadece analiz metnini içermeli. JSON veya başka bir format kullanma.
+      2. Her maddenin başında mutlaka "###Madde [Numara/Adı]###" ayırıcı etiketini kullan.
+      3. Her anahtar kelime (Hukuki Değerlendirme, Uygunluk Etiketi, Önerilen Revize Madde) yeni bir satırda başlasın.
+      4. Eğer bir madde başlığı yoksa, "Madde [Numara]###" şeklinde bırak. Örneğin: "###Madde 1###".
 
       Analiz edilecek sözleşme metni:
       ${contractText}
@@ -54,11 +48,11 @@ export default async function handler(req, res) {
         messages: [
           {
             role: "system",
-            content: "Sen bir hukuk uzmanısın. Kullanıcının verdiği sözleşme metnini maddelere ayırarak, her bir madde için kısa bir hukuki uygunluk değerlendirmesi ve etiketini belirle. Çıktın, kullanıcının belirttiği formatta olmalı. Sadece çıktı formatına sadık kal."
+            content: "Sen bir Türk Hukuku uzmanı yapay zekasın. Görevin, kullanıcının verdiği sözleşme metnini, her maddeyi '###Madde X###' formatıyla ayırarak ve her maddenin altında belirtilen anahtar kelimelerle hukuki değerlendirme, uygunluk etiketi ve revize maddeyi sağlamaktır. Sadece istenen formatta, net ve açıklayıcı metin çıktısı ver. Başka hiçbir şey ekleme."
           },
-          { role: "user", content: simplifiedAnalysisPrompt }
+          { role: "user", content: newSimplifiedAnalysisPrompt }
         ],
-        temperature: 0.1, // Çok düşük sıcaklık, çıktının formatına sadık kalması için
+        temperature: 0.1, // Düşük sıcaklık format tutarlılığı için
       }),
     });
 
@@ -70,77 +64,71 @@ export default async function handler(req, res) {
     }
 
     const rawAnalysisText = dataFromModel.choices?.[0]?.message?.content || "";
-    
-    // BURAYA EKLE: Modelden gelen ham metni konsola yazdır 
+
+    // BURAYA EKLE: Modelden gelen ham metni konsola yazdır (hala kalsın)
     console.log("------------------------------------------");
     console.log("Modelden Gelen Ham Analiz Metni (rawAnalysisText):");
     console.log(rawAnalysisText);
     console.log("------------------------------------------");
 
-    // Şimdi, modelden gelen basit metni bizim tarafımızdan istediğimiz JSON formatına ayrıştıralım
-    // Bu RegEx, "Madde X - Başlık:" ile başlayan blokları yakalar.
-    const articleBlocks = rawAnalysisText.split(/(?=^Madde \d+ - .*?:)/gm);
+    // Modelden gelen metni "###Madde X###" ayracına göre parçalayalım
+    const articleBlocks = rawAnalysisText.split(/(?=###Madde\s(?:[\d.]+)(?:.*?)\s?###)/g);
     
     // İlk eleman genellikle boş veya giriş metni olabilir, bu yüzden filtreleyelim
-    const cleanedBlocks = articleBlocks.filter(block => block.trim().startsWith("Madde "));
+    const cleanedBlocks = articleBlocks.filter(block => block.trim().startsWith("###Madde "));
 
     for (const block of cleanedBlocks) {
-      const lines = block.trim().split('\n').map(line => line.trim());
-      
       let maddeNo = "";
       let maddeBaslik = "";
-      let maddeIcerigi = [];
+      let maddeIcerigi = "";
       let hukukiDegerlendirme = "";
       let uygunlukEtiketi = "";
-      
-      let currentSection = ""; // 'content', 'evaluation', 'tag'
-      
-      for (const line of lines) {
-        if (line.startsWith("Madde ")) {
-          const match = line.match(/^Madde (\d+)(?: - (.*?))?:/);
-          if (match) {
-            maddeNo = parseInt(match[1]) || match[1]; // Sayıysa sayı, değilse string
-            maddeBaslik = match[2] || "";
-            currentSection = "content"; // Madde başladı, içerik bekliyoruz
-            continue;
-          }
-        } else if (line.startsWith("Değerlendirme:")) {
-          hukukiDegerlendirme = line.substring("Değerlendirme:".length).trim();
-          currentSection = "evaluation";
-          continue;
-        } else if (line.startsWith("Etiket:")) {
-          uygunlukEtiketi = line.substring("Etiket:".length).trim();
-          currentSection = "tag";
-          continue;
-        }
+      let onerilenRevizeMadde = "";
 
-        // Madde içeriği veya değerlendirme devamı
-        if (currentSection === "content" && line !== "") {
-          maddeIcerigi.push(line);
-        } else if (currentSection === "evaluation" && line !== "" && !line.startsWith("Etiket:")) {
-          hukukiDegerlendirme += ` ${line}`; // Değerlendirme birden fazla satır olabilir
-        }
+      const lines = block.trim().split('\n').map(line => line.trim());
+      
+      // İlk satır madde başlığı ve numarasını içeriyor olmalı
+      const firstLine = lines.shift(); // İlk satırı al ve diziden çıkar
+      const maddeMatch = firstLine.match(/###Madde\s([\d.]+)(?: - (.*?))?###/);
+
+      if (maddeMatch) {
+        maddeNo = maddeMatch[1] || "";
+        maddeBaslik = maddeMatch[2] || "";
+      } else {
+        // Eğer format beklenenden farklıysa, burayı atla veya hata logla
+        console.warn("Madde başlığı formatı beklenenden farklı:", firstLine);
+        continue; 
       }
 
-      // Maddenin içeriğini ve diğer alanları düzeltelim (array'den string'e çevirme vb.)
-      const fullMaddeIcerigi = maddeIcerigi.join('\n').trim(); // Satır sonlarıyla birleştir
-      const cleanedHukukiDegerlendirme = hukukiDegerlendirme.replace(/^Değerlendirme:/, '').trim();
+      // Geri kalan satırları ayrıştır
+      let currentContent = [];
+      for (const line of lines) {
+        if (line.startsWith("Hukuki Değerlendirme:")) {
+          hukukiDegerlendirme = line.substring("Hukuki Değerlendirme:".length).trim();
+          currentContent = []; // İçerik kısmı bitti
+        } else if (line.startsWith("Uygunluk Etiketi:")) {
+          uygunlukEtiketi = line.substring("Uygunluk Etiketi:".length).trim();
+          currentContent = [];
+        } else if (line.startsWith("Önerilen Revize Madde:")) {
+          onerilenRevizeMadde = line.substring("Önerilen Revize Madde:".length).trim();
+          currentContent = [];
+        } else {
+          // Eğer anahtar kelimelerden biri değilse ve madde içeriği bekleniyorsa
+          currentContent.push(line);
+        }
+      }
+      maddeIcerigi = currentContent.join('\n').trim();
 
-      // Örnek metinde olmayan ancak frontend'de beklenen varsayılan değerler
-      // Bu kısımları GPT-4o'dan doğrudan almak yerine, burada varsayılan değerler verelim
-      // veya gerekirse ayrı bir LLM çağrısı ile doldurabiliriz.
-      const gerekce = cleanedHukukiDegerlendirme; // Basitlik için değerlendirmeyi gerekçe yapalım
-      const kanuniDayanak = "Kanuni Dayanak Belirlenemedi"; // Varsayılan değer
-      const yargiKarariOzeti = "İlgili yargı kararı bulunamadı."; // Varsayılan değer
-      const onerilenRevizeMadde = (uygunlukEtiketi === "🟡 Riskli Madde" || uygunlukEtiketi === "🔴 Geçersiz Madde") 
-                                ? "Modelden revize madde alınamadı. Manuel revize gerekli." // Model sadece kısa değerlendirme yaptığı için
-                                : "Revize gerekmiyor.";
+      // Ek alanlar için varsayılan değerler
+      const gerekce = hukukiDegerlendirme; // Geçici olarak değerlendirmeyi gerekçe yapalım
+      const kanuniDayanak = "Kanuni Dayanak Belirlenemedi"; 
+      const yargiKarariOzeti = "İlgili yargı kararı bulunamadı."; 
 
       analysisResult.push({
-        maddeNo: maddeNo,
+        maddeNo: isNaN(parseInt(maddeNo)) ? maddeNo : parseInt(maddeNo), // Sayıya çevir, değilse string bırak
         maddeBaslik: maddeBaslik,
-        maddeIcerigi: fullMaddeIcerigi,
-        hukukiDegerlendirme: cleanedHukukiDegerlendirme,
+        maddeIcerigi: maddeIcerigi,
+        hukukiDegerlendirme: hukukiDegerlendirme,
         uygunlukEtiketi: uygunlukEtiketi,
         gerekce: gerekce,
         kanuniDayanak: kanuniDayanak,
@@ -156,6 +144,3 @@ export default async function handler(req, res) {
     res.status(500).json({ error: "Sunucu hatası: " + error.message });
   }
 }
-
-   
-    
