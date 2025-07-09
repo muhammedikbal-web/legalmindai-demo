@@ -20,7 +20,10 @@ export default async function handler(req, res) {
       Aşağıdaki İngilizce hukuki metni Türkçe'ye çevir.
       Çeviriyi yaparken hukuki terimlerin doğru ve yerleşik karşılıklarını kullanmaya özen göster.
       Çeviriyi sadece verilen metinle sınırlı tut, ek yorum veya açıklama yapma.
-      Çevrilen metnin orijinal paragraf ve satır yapısını koruyarak, okunabilirliği artırmak için metin içinde **mantıklı ve doğal satır sonları (\\n karakteri) kullan.** Her paragrafın veya anlam bütünlüğü olan cümlenin sonuna \\n koyarak çıktıyı formatla.
+      
+      Çevrilen metnin orijinal paragraf ve satır yapısını KESİNLİKLE koru.
+      Her paragrafın sonunda ve mantıklı olan her satır sonunda doğal bir satır sonu (\\n karakteri) kullan.
+      Her bir cümlenin veya cümleciklerin bitiminde uygun şekilde yeni satıra geçerek okunabilirliği artır.
       `;
 
     const translateResponse = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -32,7 +35,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: "gpt-4o",
         messages: [{ role: "user", content: `${translationPrompt}\n\n${textToTranslate}` }],
-        temperature: 0.3,
+        temperature: 0.3, // Çeviri kalitesi için uygun sıcaklık
       }),
     });
 

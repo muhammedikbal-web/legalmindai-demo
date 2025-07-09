@@ -13,25 +13,29 @@ export default async function handler(req, res) {
 
   let analysisResult = [];
 
-  try {
-    // Yeni Yaklaşım: Modelden her maddeyi "###Madde X###" ile ayırarak vermesini isteyeceğiz.
-    // Analiz detaylarını her madde bloğunun içine daha basit formatta isteyeceğiz.
+ try {
     const newSimplifiedAnalysisPrompt = `
-      Aşağıdaki sözleşme metnini dikkatlice oku. Her bir "Madde X" veya benzeri ifadeyi (örn. "Madde 1", "Madde 2", "Giriş" gibi) ayrı bir sözleşme maddesi olarak tanımla.
+      Sen çok yetenekli, Türk Hukuku konusunda uzman ve çözüm odaklı bir yapay zeka hukuk danışmanısın.
+      Aşağıdaki sözleşme metnini dikkatlice oku. Her bir "Madde X" (örn. "Madde 1", "Madde 2", "Giriş", "Taraflar" gibi) ifadesini ayrı bir sözleşme maddesi olarak tanımla.
       
-      Her bir madde için, önce maddeyi aşağıdaki özel formatta ayır: "###Madde [Numara/Adı]###".
-      Ardından, maddenin tam içeriğini yaz.
-      Sonrasında, o madde için Türk Hukuku'na göre bir hukuki değerlendirme, uygunluk etiketi ve varsa önerilen revize maddeyi aşağıdaki anahtar kelimelerle belirt:
+      Her bir tespit ettiğin sözleşme maddesini tek tek, ayrıntılı ve objektif bir şekilde Türk Hukuku mevzuatına göre analiz et.
       
-      Hukuki Değerlendirme: [Kısa ve öz hukuki değerlendirme]
-      Uygunluk Etiketi: [✅ Uygun Madde | 🟡 Riskli Madde | 🔴 Geçersiz Madde]
-      Önerilen Revize Madde: [Riskli veya Geçersiz ise uygun revize edilmiş madde metni. Uygunsa "Revize gerekmiyor."]
+      Çıktı formatı için aşağıdaki kesin kurallara uy:
+      1. Her maddenin başında özel bir ayırıcı etiket kullan: "###MADDE BAŞLANGICI###". Bu etiketin hemen ardından madde numarasını ve başlığını (varsa) yaz. Örnek: "###MADDE BAŞLANGICI### Madde 1 - Sözleşmenin Konusu". Eğer madde numarası ve başlığı yoksa, "###MADDE BAŞLANGICI### [İçerik Tanımlayıcı]" şeklinde genel bir tanımlayıcı kullan (örn: "###MADDE BAŞLANGICI### Giriş").
+      2. Madde içeriği, ayırıcı etiketin hemen altında başlasın ve maddenin tam metnini içersin.
+      3. Her maddenin analiz detayları, madde içeriğinden sonra aşağıdaki anahtar kelimelerle belirtilsin:
+         - Hukuki Değerlendirme: [Detaylı hukuki değerlendirme. Okunabilirliği artırmak için içinde mantıklı satır sonları (\\n) kullan.]
+         - Uygunluk Etiketi: [✅ Uygun Madde | 🟡 Riskli Madde | 🔴 Geçersiz Madde]
+         - Gerekçe: [Etiketi neden seçtiğini, hukuki argümanlarla detaylı açıkla. İçinde mantıklı satır sonları (\\n) kullan.]
+         - Kanuni Dayanak: [Doğru, spesifik ve tam kanun maddesi (örn: Türk Borçlar Kanunu m. 27). Eğer kesin ve doğrudan ilgili bir kanun maddesi bulamıyorsan veya emin değilsen: "Belirlenemedi" yaz.]
+         - Yargı Kararı Özeti: [İlgili Yargıtay/Danıştay kararı özeti ve numarası/tarihi. Yoksa "İlgili yargı kararı bulunamadı." yaz. İçinde mantıklı satır sonları (\\n) kullan.]
+         - Önerilen Revize Madde: [Riskli veya Geçersiz ise Türk hukukuna uygun revize edilmiş madde metni. Uygunsa "Revize gerekmiyor." yaz. İçinde mantıklı satır sonları (\\n) kullan.]
 
-      **Çok Önemli Kurallar:**
-      1. Çıktı, sadece analiz metnini içermeli. JSON veya başka bir format kullanma.
-      2. Her maddenin başında mutlaka "###Madde [Numara/Adı]###" ayırıcı etiketini kullan.
-      3. Her anahtar kelime (Hukuki Değerlendirme, Uygunluk Etiketi, Önerilen Revize Madde) yeni bir satırda başlasın.
-      4. Eğer bir madde başlığı yoksa, "Madde [Numara]###" şeklinde bırak. Örneğin: "###Madde 1###".
+      **Çıktı Kuralları Özeti (Çok Önemli):**
+      * JSON formatı kullanma, sadece metin çıktısı ver.
+      * Her maddeyi "###MADDE BAŞLANGICI###" etiketiyle ayır.
+      * Tüm alanları (Değerlendirme, Gerekçe, Yargı Kararı Özeti, Revize Madde) **detaylı** bir şekilde doldur ve içinde **satır sonları (\\n)** kullan.
+      * Sadece analiz sonucunu ver, ek giriş/çıkış cümleleri kullanma.
 
       Analiz edilecek sözleşme metni:
       ${contractText}
@@ -48,7 +52,7 @@ export default async function handler(req, res) {
         messages: [
           {
             role: "system",
-            content: "Sen bir Türk Hukuku uzmanı yapay zekasın. Görevin, kullanıcının verdiği sözleşme metnini, her maddeyi '###Madde X###' formatıyla ayırarak ve her maddenin altında belirtilen anahtar kelimelerle hukuki değerlendirme, uygunluk etiketi ve revize maddeyi sağlamaktır. Sadece istenen formatta, net ve açıklayıcı metin çıktısı ver. Başka hiçbir şey ekleme."
+            content: "Sen bir Türk Hukuku uzmanı yapay zekasın. Kullanıcının verdiği sözleşme metnini, her maddeyi '###MADDE BAŞLANGICI###' etiketiyle ayırarak ve her maddenin altında belirtilen anahtar kelimelerle detaylı hukuki değerlendirme, uygunluk etiketi, gerekçe, kanuni dayanak, yargı kararı özeti ve revize maddeyi sağlamaktır. Sadece istenen formatta, net ve açıklayıcı metin çıktısı ver. Başka hiçbir şey ekleme. Tüm açıklama alanlarında satır sonu (\\n) karakterleri kullan."
           },
           { role: "user", content: newSimplifiedAnalysisPrompt }
         ],
@@ -65,17 +69,17 @@ export default async function handler(req, res) {
 
     const rawAnalysisText = dataFromModel.choices?.[0]?.message?.content || "";
 
-    // BURAYA EKLE: Modelden gelen ham metni konsola yazdır (hala kalsın)
+    // Modelden gelen ham metni konsola yazdır (hala kalsın)
     console.log("------------------------------------------");
     console.log("Modelden Gelen Ham Analiz Metni (rawAnalysisText):");
     console.log(rawAnalysisText);
     console.log("------------------------------------------");
 
-    // Modelden gelen metni "###Madde X###" ayracına göre parçalayalım
-    const articleBlocks = rawAnalysisText.split(/(?=###Madde\s(?:[\d.]+)(?:.*?)\s?###)/g);
+    // Modelden gelen metni "###MADDE BAŞLANGICI###" ayracına göre parçalayalım
+    const articleBlocks = rawAnalysisText.split(/(?=###MADDE BAŞLANGICI###)/g);
     
     // İlk eleman genellikle boş veya giriş metni olabilir, bu yüzden filtreleyelim
-    const cleanedBlocks = articleBlocks.filter(block => block.trim().startsWith("###Madde "));
+    const cleanedBlocks = articleBlocks.filter(block => block.trim().startsWith("###MADDE BAŞLANGICI###"));
 
     for (const block of cleanedBlocks) {
       let maddeNo = "";
@@ -83,57 +87,88 @@ export default async function handler(req, res) {
       let maddeIcerigi = "";
       let hukukiDegerlendirme = "";
       let uygunlukEtiketi = "";
+      let gerekce = "";
+      let kanuniDayanak = "";
+      let yargiKarariOzeti = "";
       let onerilenRevizeMadde = "";
 
       const lines = block.trim().split('\n').map(line => line.trim());
       
-      // İlk satır madde başlığı ve numarasını içeriyor olmalı
-      const firstLine = lines.shift(); // İlk satırı al ve diziden çıkar
-      const maddeMatch = firstLine.match(/###Madde\s([\d.]+)(?: - (.*?))?###/);
+      let currentSection = 'meta'; // 'meta', 'content', 'hukuki', 'etiket', 'gerekce', 'kanuni', 'yargi', 'revize'
+      let tempMaddeIcerigiLines = []; // Madde içeriğini toplamak için geçici dizi
 
-      if (maddeMatch) {
-        maddeNo = maddeMatch[1] || "";
-        maddeBaslik = maddeMatch[2] || "";
-      } else {
-        // Eğer format beklenenden farklıysa, burayı atla veya hata logla
-        console.warn("Madde başlığı formatı beklenenden farklı:", firstLine);
-        continue; 
-      }
-
-      // Geri kalan satırları ayrıştır
-      let currentContent = [];
       for (const line of lines) {
+        if (line.startsWith("###MADDE BAŞLANGICI###")) {
+          const match = line.match(/###MADDE BAŞLANGICI###\s*(?:Madde\s*([\d.]+))?\s*(?:-\s*(.*))?/i);
+          if (match) {
+            maddeNo = match[1] || "";
+            maddeBaslik = match[2] || "";
+          } else {
+             // Eğer madde numarası veya başlık yoksa, genel bir tanımlayıcı dene
+             const genericMatch = line.match(/###MADDE BAŞLANGICI###\s*(.*)/i);
+             if(genericMatch) {
+                maddeNo = genericMatch[1].trim(); // Örneğin "Giriş"
+                maddeBaslik = "";
+             }
+          }
+          currentSection = 'content'; // Madde meta bilgileri bitti, içerik bekliyoruz
+          continue;
+        }
+
+        // Anahtar kelimelerle başlayan kısımları yakala
         if (line.startsWith("Hukuki Değerlendirme:")) {
           hukukiDegerlendirme = line.substring("Hukuki Değerlendirme:".length).trim();
-          currentContent = []; // İçerik kısmı bitti
+          currentSection = 'hukuki';
         } else if (line.startsWith("Uygunluk Etiketi:")) {
           uygunlukEtiketi = line.substring("Uygunluk Etiketi:".length).trim();
-          currentContent = [];
+          currentSection = 'etiket';
+        } else if (line.startsWith("Gerekçe:")) {
+          gerekce = line.substring("Gerekçe:".length).trim();
+          currentSection = 'gerekce';
+        } else if (line.startsWith("Kanuni Dayanak:")) {
+          kanuniDayanak = line.substring("Kanuni Dayanak:".length).trim();
+          currentSection = 'kanuni';
+        } else if (line.startsWith("Yargı Kararı Özeti:")) {
+          yargiKarariOzeti = line.substring("Yargı Kararı Özeti:".length).trim();
+          currentSection = 'yargi';
         } else if (line.startsWith("Önerilen Revize Madde:")) {
           onerilenRevizeMadde = line.substring("Önerilen Revize Madde:".length).trim();
-          currentContent = [];
+          currentSection = 'revize';
         } else {
-          // Eğer anahtar kelimelerden biri değilse ve madde içeriği bekleniyorsa
-          currentContent.push(line);
+          // Önceki bölümün devamı olarak ekle
+          switch (currentSection) {
+            case 'content':
+              tempMaddeIcerigiLines.push(line);
+              break;
+            case 'hukuki':
+              hukukiDegerlendirme += `\n${line}`;
+              break;
+            case 'gerekce':
+              gerekce += `\n${line}`;
+              break;
+            case 'yargi':
+              yargiKarariOzeti += `\n${line}`;
+              break;
+            case 'revize':
+              onerilenRevizeMadde += `\n${line}`;
+              break;
+            // 'etiket' tek satırlık olmalı, ekleme yapma
+          }
         }
       }
-      maddeIcerigi = currentContent.join('\n').trim();
-
-      // Ek alanlar için varsayılan değerler
-      const gerekce = hukukiDegerlendirme; // Geçici olarak değerlendirmeyi gerekçe yapalım
-      const kanuniDayanak = "Kanuni Dayanak Belirlenemedi"; 
-      const yargiKarariOzeti = "İlgili yargı kararı bulunamadı."; 
+      
+      maddeIcerigi = tempMaddeIcerigiLines.join('\n').trim();
 
       analysisResult.push({
         maddeNo: isNaN(parseInt(maddeNo)) ? maddeNo : parseInt(maddeNo), // Sayıya çevir, değilse string bırak
         maddeBaslik: maddeBaslik,
         maddeIcerigi: maddeIcerigi,
-        hukukiDegerlendirme: hukukiDegerlendirme,
-        uygunlukEtiketi: uygunlukEtiketi,
-        gerekce: gerekce,
-        kanuniDayanak: kanuniDayanak,
-        yargiKarariOzeti: yargiKarariOzeti,
-        onerilenRevizeMadde: onerilenRevizeMadde,
+        hukukiDegerlendirme: hukukiDegerlendirme.trim(),
+        uygunlukEtiketi: uygunlukEtiketi.trim(),
+        gerekce: gerekce.trim(),
+        kanuniDayanak: kanuniDayanak.trim(),
+        yargiKarariOzeti: yargiKarariOzeti.trim(),
+        onerilenRevizeMadde: onerilenRevizeMadde.trim(),
       });
     }
 
@@ -144,3 +179,7 @@ export default async function handler(req, res) {
     res.status(500).json({ error: "Sunucu hatası: " + error.message });
   }
 }
+
+    
+
+   
