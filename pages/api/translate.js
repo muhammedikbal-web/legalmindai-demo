@@ -15,8 +15,6 @@ export default async function handler(req, res) {
   let analysisResult = [];
 
   try {
-    // Adım 1: İngilizce metni Türkçe'ye çevir
-    // prompt'a çevirinin içinde satır sonları olması gerektiğini ekledik
     const translationPrompt = `
       Aşağıdaki İngilizce hukuki metni Türkçe'ye çevir.
       Çeviriyi yaparken hukuki terimlerin doğru ve yerleşik karşılıklarını kullanmaya özen göster.
@@ -47,7 +45,12 @@ export default async function handler(req, res) {
     translatedText = translateData.choices?.[0]?.message?.content || "Çeviri alınamadı.";
 
     // Adım 2: Çevrilen Türkçe metni analyze.js'ye göndererek analiz et
-    const analyzeResponse = await fetch(`${process.env.NEXT_PUBLIC_VERCEL_URL}/api/analyze`, { // Doğru endpoint'i kullan
+    // DÜZELTME: URL'nin başına 'https://' ekledik
+    const analyzeApiUrl = process.env.NODE_ENV === 'production'
+      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/api/analyze` // Vercel'de çalışırken
+      : `http://localhost:3000/api/analyze`; // Yerel geliştirme ortamında çalışırken
+
+    const analyzeResponse = await fetch(analyzeApiUrl, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -57,15 +60,13 @@ export default async function handler(req, res) {
 
     const analyzeData = await analyzeResponse.json();
 
-    if (!analyzeResponse.ok) { // analyze.js'den gelen hata durumunu kontrol et
+    if (!analyzeResponse.ok) {
       console.error("Analyze API Hatası:", analyzeData.error);
       return res.status(analyzeResponse.status).json({ error: analyzeData.error || "Analiz API'sinden bir hata alındı." });
     }
 
-    // analyze.js'den gelen analysisResult'ı doğrudan kullan
     analysisResult = Array.isArray(analyzeData.analysisResult) ? analyzeData.analysisResult : [];
 
-    // Her iki sonucu da ön yüze gönder
     res.status(200).json({ translatedText, analysisResult });
 
   } catch (error) {
