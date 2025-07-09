@@ -15,11 +15,12 @@ export default async function handler(req, res) {
   let analysisResult = [];
 
   try {
+    // Adım 1: İngilizce metni Türkçe'ye çevir
     const translationPrompt = `
       Aşağıdaki İngilizce hukuki metni Türkçe'ye çevir.
       Çeviriyi yaparken hukuki terimlerin doğru ve yerleşik karşılıklarını kullanmaya özen göster.
       Çeviriyi sadece verilen metinle sınırlı tut, ek yorum veya açıklama yapma.
-      Çevrilen metnin içinde, orijinal metnin paragraf ve satır yapısını korumak için mantıklı ve doğal satır sonları (\\n karakteri) kullan.
+      Çevrilen metnin orijinal paragraf ve satır yapısını koruyarak, okunabilirliği artırmak için metin içinde **mantıklı ve doğal satır sonları (\\n karakteri) kullan.** Her paragrafın veya anlam bütünlüğü olan cümlenin sonuna \\n koyarak çıktıyı formatla.
       `;
 
     const translateResponse = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -45,10 +46,9 @@ export default async function handler(req, res) {
     translatedText = translateData.choices?.[0]?.message?.content || "Çeviri alınamadı.";
 
     // Adım 2: Çevrilen Türkçe metni analyze.js'ye göndererek analiz et
-    // DÜZELTME: URL'nin başına 'https://' ekledik
     const analyzeApiUrl = process.env.NODE_ENV === 'production'
-      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/api/analyze` // Vercel'de çalışırken
-      : `http://localhost:3000/api/analyze`; // Yerel geliştirme ortamında çalışırken
+      ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}/api/analyze`
+      : `http://localhost:3000/api/analyze`;
 
     const analyzeResponse = await fetch(analyzeApiUrl, {
       method: "POST",

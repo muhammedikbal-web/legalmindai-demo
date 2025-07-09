@@ -14,103 +14,142 @@ export default async function handler(req, res) {
   let analysisResult = [];
 
   try {
-    const analysisPrompt = `
-      Sen çok yetenekli, Türk Hukuku konusunda uzman ve çözüm odaklı bir yapay zeka hukuk danışmanısın.
-      Aşağıda sana verilen sözleşme metnini dikkatlice oku. Metindeki her bir "Madde X" (örneğin "Madde 1", "Madde 2" gibi) ifadesini ayrı bir sözleşme maddesi olarak tanımla.
+    // Modelden sadece madde madde ayrıştırılmış metin ve kısa bir değerlendirme isteyelim.
+    // Detaylı JSON yapısını ve diğer bilgileri burada biz oluşturalım.
+    const simplifiedAnalysisPrompt = `
+      Aşağıdaki sözleşme metnini dikkatlice oku ve her bir maddeyi (başlık ve içeriğiyle birlikte) ayrı ayrı belirle.
+      Her bir madde için, önce madde numarasını ve başlığını (varsa), ardından maddenin tam içeriğini yaz.
+      Sonrasında, o maddenin Türk Hukuku'na göre kısa bir uygunluk değerlendirmesini yap ve uygunluk etiketini (✅ Uygun, 🟡 Riskli, 🔴 Geçersiz) belirt.
       
-      Her bir tespit ettiğin sözleşme maddesini tek tek, ayrıntılı ve objektif bir şekilde Türk Hukuku mevzuatına göre analiz et.
+      Çıktın aşağıdaki formatta olsun. Her madde arasında boş bir satır bırak.
       
-      Analiz sonucunu, her bir maddenin aşağıdaki kesin JSON objesi formatında olduğu bir JSON dizisi (array) olarak döndür.
+      Madde [Numara] - [Başlık]:
+      [Maddenin Tam İçeriği]
+      Değerlendirme: [Kısa Hukuki Değerlendirme]
+      Etiket: [✅ Uygun Madde | 🟡 Riskli Madde | 🔴 Geçersiz Madde]
       
-      **Çok Önemli Çıktı Kuralları:**
-      1. Çıktın, **sadece ve sadece geçerli bir JSON dizisi olmalı.** JSON dışında hiçbir ekstra metin, açıklama, başlık veya giriş/çıkış cümlesi ekleme.
-      2. JSON içindeki tüm metin alanları (yani "maddeIcerigi", "hukukiDegerlendirme", "gerekce", "yargiKarariOzeti", "onerilenRevizeMadde"), **okunabilirliği artırmak için içerisinde mantıklı ve doğal satır sonları (\\n karakteri) içermeli.**
-      3. **Tüm maddeler analiz edilmeli:** Metinde kaç madde varsa (Madde 1'den sona kadar), her biri için ayrı bir JSON objesi oluşturulmalı ve bu dizinin içinde yer almalı. Asla sadece ilk maddeyi analiz etme.
-      4. "maddeNo" alanı için, metindeki madde numarasını kullan. Eğer belirli bir madde numarası yoksa, içeriğe göre uygun bir tanımlayıcı kullanabilirsin (örneğin "Giriş", "Tanımlar" gibi).
-      5. "Kanuni Dayanak" için: Doğru, spesifik ve tam kanun maddesi (örn: Türk Borçlar Kanunu m. 27). Eğer kesin ve doğrudan ilgili bir kanun maddesi bulamıyorsan veya emin değilsen, asla yanlış veya alakasız bir madde numarası verme. Bunun yerine:
-         - "Kanuni Dayanak Belirlenemedi" şeklinde belirt. VEYA
-         - İlgili genel hukuki ilkeyi (örneğin: "Sözleşme Serbestisi İlkesi", "Dürüstlük Kuralı") VEYA
-         - İlgili kanuni çerçeveyi (örneğin: "Türk Borçlar Kanunu Genel Hükümleri", "Türk Ticaret Kanunu Genel Hükümleri") belirt.
-      6. "Uygunluk Etiketi" için sadece bu 3 etiketten birini kullan: "✅ Uygun Madde", "🟡 Riskli Madde", "🔴 Geçersiz Madde".
-
-      **JSON Objesi Yapısı (Her madde için bir obje dizisi olarak):**
-      [
-        {
-          "maddeNo": [madde numarası veya tanımlayıcı, örn: 1],
-          "maddeBaslik": [varsa maddenin başlığı, yoksa boş string],
-          "maddeIcerigi": [maddenin tam metni ve içinde satır sonları olmalı],
-          "hukukiDegerlendirme": [Detaylı hukuki değerlendirme ve içinde satır sonları olmalı],
-          "uygunlukEtiketi": ["✅ Uygun Madde"],
-          "gerekce": [Etiketi neden seçtiğini, hukuki argümanlarla ve içinde satır sonları olmalı],
-          "kanuniDayanak": [İlgili Kanun/Madde veya "Kanuni Dayanak Belirlenemedi"],
-          "yargiKarariOzeti": [İlgili Yargıtay/Danıştay kararı özeti ve numarası/tarihi. Yoksa "İlgili yargı kararı bulunamadı." ve içinde satır sonları olmalı],
-          "onerilenRevizeMadde": [Riskli veya Geçersiz ise Türk hukukuna uygun revize edilmiş madde metni. Uygunsa "Revize gerekmiyor." ve içinde satır sonları olmalı]
-        }
-        // ... Diğer maddeler de bu formatta devam edecek
-      ]
+      Örnek:
+      Madde 1 - Sözleşmenin Konusu:
+      Taraf A, Ek-1'de tanımlandığı üzere, Taraf B'ye web sitesi tasarımı ve dijital danışmanlık hizmetleri sağlamayı kabul eder.
+      Değerlendirme: Bu madde sözleşmenin konusunu açıkça belirtmektedir ve hukuken geçerlidir.
+      Etiket: ✅ Uygun Madde
+      
+      Madde 2 - Süre:
+      Bu Sözleşme, imza tarihinde yürürlüğe girecek ve 6 (altı) ay süreyle geçerli olacaktır.
+      Değerlendirme: Sözleşmenin süresi net olarak belirlenmiştir, bu da sözleşme serbestisi ilkesi kapsamında uygundur.
+      Etiket: ✅ Uygun Madde
 
       Analiz edilecek sözleşme metni:
       ${contractText}
       `;
 
-    const analyzeResponse = await fetch("https://api.openai.com/v1/chat/completions", {
+    const responseFromModel = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o", // En güncel ve yetenekli model
+        model: "gpt-4o", // En güncel model
         messages: [
           {
             role: "system",
-            content: "Senin görevin, kullanıcının verdiği sözleşme metnini maddelere ayırarak, her bir maddeyi Türk Hukuku'na göre detaylıca analiz etmek ve çıktıyı kesinlikle belirtilen JSON formatında, hiçbir ek karakter veya metin olmadan döndürmektir. JSON içindeki tüm metin alanlarında satır sonları için \\n kullan."
+            content: "Sen bir hukuk uzmanısın. Kullanıcının verdiği sözleşme metnini maddelere ayırarak, her bir madde için kısa bir hukuki uygunluk değerlendirmesi ve etiketini belirle. Çıktın, kullanıcının belirttiği formatta olmalı. Sadece çıktı formatına sadık kal."
           },
-          { role: "user", content: analysisPrompt }
+          { role: "user", content: simplifiedAnalysisPrompt }
         ],
-        temperature: 0.2, // Tutarlı JSON çıktısı için düşük sıcaklık
-        response_format: { type: "json_object" } // KRİTİK: Modelden JSON obje döndürmesini istiyoruz
+        temperature: 0.1, // Çok düşük sıcaklık, çıktının formatına sadık kalması için
       }),
     });
 
-    const data = await analyzeResponse.json();
+    const dataFromModel = await responseFromModel.json();
 
-    if (data.error) {
-      console.error("OpenAI API Hatası:", data.error);
-      return res.status(data.error.status || 500).json({ error: data.error.message || "OpenAI API'den beklenmeyen bir hata alındı." });
+    if (dataFromModel.error) {
+      console.error("OpenAI API Hatası (analyze.js):", dataFromModel.error);
+      return res.status(dataFromModel.error.status || 500).json({ error: dataFromModel.error.message || "OpenAI API'den analiz sırasında beklenmeyen bir hata alındı." });
     }
 
-    let rawAnalysisContent = data.choices?.[0]?.message?.content;
-    let finalAnalysisResult = []; // API'den gelecek analysisResult için yeni değişken
+    const rawAnalysisText = dataFromModel.choices?.[0]?.message?.content || "";
 
-    try {
-        if (typeof rawAnalysisContent === 'string') {
-            finalAnalysisResult = JSON.parse(rawAnalysisContent);
-        } else if (typeof rawAnalysisContent === 'object' && rawAnalysisContent !== null) {
-            finalAnalysisResult = rawAnalysisContent;
-        } else {
-            console.warn("Modelden gelen analiz sonucu beklenen formatta değil (boş/tanımsız):", rawAnalysisContent);
-        }
-
-        // Güvenlik kontrolü: Eğer analysisResult dizi değilse veya boşsa, boş dizi ata
-        if (!Array.isArray(finalAnalysisResult)) {
-            if (typeof finalAnalysisResult === 'object' && finalAnalysisResult !== null && Object.keys(finalAnalysisResult).length > 0) {
-                finalAnalysisResult = [finalAnalysisResult]; 
-            } else {
-                finalAnalysisResult = [];
-            }
-        }
-
-    } catch (parseError) {
-        console.error("Analiz sonucu JSON olarak ayrıştırılamadı veya işlenirken hata:", parseError);
-        return res.status(500).json({ error: "Analiz yanıtı işlenirken bir sorun oluştu." });
-    }
+    // Şimdi, modelden gelen basit metni bizim tarafımızdan istediğimiz JSON formatına ayrıştıralım
+    // Bu RegEx, "Madde X - Başlık:" ile başlayan blokları yakalar.
+    const articleBlocks = rawAnalysisText.split(/(?=^Madde \d+ - .*?:)/gm);
     
-    // Yalnızca analiz sonucunu döndür
-    res.status(200).json({ analysisResult: finalAnalysisResult });
+    // İlk eleman genellikle boş veya giriş metni olabilir, bu yüzden filtreleyelim
+    const cleanedBlocks = articleBlocks.filter(block => block.trim().startsWith("Madde "));
+
+    for (const block of cleanedBlocks) {
+      const lines = block.trim().split('\n').map(line => line.trim());
+      
+      let maddeNo = "";
+      let maddeBaslik = "";
+      let maddeIcerigi = [];
+      let hukukiDegerlendirme = "";
+      let uygunlukEtiketi = "";
+      
+      let currentSection = ""; // 'content', 'evaluation', 'tag'
+      
+      for (const line of lines) {
+        if (line.startsWith("Madde ")) {
+          const match = line.match(/^Madde (\d+)(?: - (.*?))?:/);
+          if (match) {
+            maddeNo = parseInt(match[1]) || match[1]; // Sayıysa sayı, değilse string
+            maddeBaslik = match[2] || "";
+            currentSection = "content"; // Madde başladı, içerik bekliyoruz
+            continue;
+          }
+        } else if (line.startsWith("Değerlendirme:")) {
+          hukukiDegerlendirme = line.substring("Değerlendirme:".length).trim();
+          currentSection = "evaluation";
+          continue;
+        } else if (line.startsWith("Etiket:")) {
+          uygunlukEtiketi = line.substring("Etiket:".length).trim();
+          currentSection = "tag";
+          continue;
+        }
+
+        // Madde içeriği veya değerlendirme devamı
+        if (currentSection === "content" && line !== "") {
+          maddeIcerigi.push(line);
+        } else if (currentSection === "evaluation" && line !== "" && !line.startsWith("Etiket:")) {
+          hukukiDegerlendirme += ` ${line}`; // Değerlendirme birden fazla satır olabilir
+        }
+      }
+
+      // Maddenin içeriğini ve diğer alanları düzeltelim (array'den string'e çevirme vb.)
+      const fullMaddeIcerigi = maddeIcerigi.join('\n').trim(); // Satır sonlarıyla birleştir
+      const cleanedHukukiDegerlendirme = hukukiDegerlendirme.replace(/^Değerlendirme:/, '').trim();
+
+      // Örnek metinde olmayan ancak frontend'de beklenen varsayılan değerler
+      // Bu kısımları GPT-4o'dan doğrudan almak yerine, burada varsayılan değerler verelim
+      // veya gerekirse ayrı bir LLM çağrısı ile doldurabiliriz.
+      const gerekce = cleanedHukukiDegerlend; // Basitlik için değerlendirmeyi gerekçe yapalım
+      const kanuniDayanak = "Kanuni Dayanak Belirlenemedi"; // Varsayılan değer
+      const yargiKarariOzeti = "İlgili yargı kararı bulunamadı."; // Varsayılan değer
+      const onerilenRevizeMadde = (uygunlukEtiketi === "🟡 Riskli Madde" || uygunlukEtiketi === "🔴 Geçersiz Madde") 
+                                ? "Modelden revize madde alınamadı. Manuel revize gerekli." // Model sadece kısa değerlendirme yaptığı için
+                                : "Revize gerekmiyor.";
+
+      analysisResult.push({
+        maddeNo: maddeNo,
+        maddeBaslik: maddeBaslik,
+        maddeIcerigi: fullMaddeIcerigi,
+        hukukiDegerlendirme: cleanedHukukiDegerlendirme,
+        uygunlukEtiketi: uygunlukEtiketi,
+        gerekce: gerekce,
+        kanuniDayanak: kanuniDayanak,
+        yargiKarariOzeti: yargiKarariOzeti,
+        onerilenRevizeMadde: onerilenRevizeMadde,
+      });
+    }
+
+    res.status(200).json({ analysisResult });
 
   } catch (error) {
-    console.error("Genel sunucu hatası:", error);
+    console.error("Genel sunucu hatası (analyze.js):", error);
     res.status(500).json({ error: "Sunucu hatası: " + error.message });
   }
 }
+
+   
+    
