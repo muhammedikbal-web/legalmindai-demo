@@ -63,8 +63,13 @@ export default async function handler(req, res) {
     });
 
     const dataFromModel = await responseFromModel.json();
-
-    if (dataFromModel.error) {
+  
+    // Yeni EKLENECEK: OpenAI API'den gelen ham JSON yanıtını göster
+    console.log("------------------------------------------");
+    console.log("OpenAI API'den Gelen Ham Veri (dataFromModel):", JSON.stringify(dataFromModel, null, 2));
+    console.log("------------------------------------------");
+    
+      if (dataFromModel.error) {
       console.error("OpenAI API Hatası (analyze.js):", dataFromModel.error);
       return res.status(dataFromModel.error.status || 500).json({ error: dataFromModel.error.message || "OpenAI API'den analiz sırasında beklenmeyen bir hata alındı." });
     }
