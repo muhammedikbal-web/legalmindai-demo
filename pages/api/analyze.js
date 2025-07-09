@@ -70,6 +70,12 @@ export default async function handler(req, res) {
     }
 
     const rawAnalysisText = dataFromModel.choices?.[0]?.message?.content || "";
+    
+    // BURAYA EKLE: Modelden gelen ham metni konsola yazdır 
+    console.log("------------------------------------------");
+    console.log("Modelden Gelen Ham Analiz Metni (rawAnalysisText):");
+    console.log(rawAnalysisText);
+    console.log("------------------------------------------");
 
     // Şimdi, modelden gelen basit metni bizim tarafımızdan istediğimiz JSON formatına ayrıştıralım
     // Bu RegEx, "Madde X - Başlık:" ile başlayan blokları yakalar.
