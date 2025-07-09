@@ -21,9 +21,9 @@ export default async function handler(req, res) {
       Çeviriyi yaparken hukuki terimlerin doğru ve yerleşik karşılıklarını kullanmaya özen göster.
       Çeviriyi sadece verilen metinle sınırlı tut, ek yorum veya açıklama yapma.
       
-      Çevrilen metnin orijinal paragraf ve satır yapısını KESİNLİKLE koru.
-      Her paragrafın sonunda ve mantıklı olan her satır sonunda doğal bir satır sonu (\\n karakteri) kullan.
-      Her bir cümlenin veya cümleciklerin bitiminde uygun şekilde yeni satıra geçerek okunabilirliği artır.
+      Çevrilen metnin **kesinlikle** orijinal paragraf ve satır yapısını koru.
+      Her paragrafın sonunda ve mantıklı olan her cümlenin sonunda mutlaka bir satır sonu (\\n karakteri) kullan.
+      Her bir cümlenin veya cümleciklerin bitiminde **derhal** yeni satıra geçerek metnin okunabilirliğini en üst düzeye çıkar.
       `;
 
     const translateResponse = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -35,7 +35,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: "gpt-4o",
         messages: [{ role: "user", content: `${translationPrompt}\n\n${textToTranslate}` }],
-        temperature: 0.3, // Çeviri kalitesi için uygun sıcaklık
+        temperature: 0.5, // Daha yüksek sıcaklık, biraz daha esneklik ve doğal satır sonları için
       }),
     });
 
