@@ -4,21 +4,91 @@ import React, { useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link'; // Navbar için Link'i ekledik
 
-export default function ContractPage() {
-  const [inputText, setInputText] = useState('');
-  const [analysisResult, setAnalysisResult] = useState([]); // Array olarak bekliyoruz
+// Accordion bileşeni
+const Accordion = ({ children }) => {
+  const [openItem, setOpenItem] = useState(null);
+
+  const toggleItem = (index) => {
+    setOpenItem(openItem === index ? null : index);
+  };
+
+  return (
+    <div className="space-y-4">
+      {React.Children.map(children, (child, index) => {
+        return React.cloneElement(child, {
+          isOpen: openItem === index,
+          toggle: () => toggleItem(index),
+          index: index, // child'a index prop'unu ekledik
+        });
+      })}
+    </div>
+  );
+};
+
+// AccordionItem bileşeni
+const AccordionItem = ({ title, content, isOpen, toggle, status, index }) => {
+  let statusColor = '';
+  switch (status) {
+    case 'Uygun':
+      statusColor = 'text-green-600';
+      break;
+    case 'Riskli':
+      statusColor = 'text-yellow-600';
+      break;
+    case 'Geçersiz':
+      statusColor = 'text-red-600';
+      break;
+    default:
+      statusColor = 'text-gray-600';
+  }
+
+  return (
+    <div className="border border-gray-200 rounded-lg shadow-sm">
+      <button
+        className="flex justify-between items-center w-full p-4 text-left font-medium text-lg text-gray-800 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 transition duration-150 ease-in-out rounded-lg"
+        onClick={toggle}
+        aria-expanded={isOpen}
+        aria-controls={`accordion-content-${index}`}
+      >
+        <span className="flex-1">
+          {title} <span className={`text-sm font-semibold ${statusColor}`}>({status})</span>
+        </span>
+        <svg
+          className={`w-6 h-6 transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
+      </button>
+      {isOpen && (
+        <div id={`accordion-content-${index}`} className="p-4 pt-0 text-gray-700 bg-white">
+          <div className="prose max-w-none">
+            {content.split('\n').map((line, i) => (
+              <p key={i}>{line}</p>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default function ContractAnalysis() {
+  const [contractText, setContractText] = useState('');
+  const [analysisResult, setAnalysisResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [activeAccordion, setActiveAccordion] = useState(null); // Akordiyonun açık/kapalı durumu için
 
-  const handleAnalyze = async () => {
+  const analyzeContract = async () => {
     setError('');
-    setAnalysisResult([]); // Her yeni analizde önceki sonuçları temizle
-    setActiveAccordion(null); // Akordiyonları kapat
     setLoading(true);
+    setAnalysisResult(null);
 
-    if (!inputText.trim()) {
-      setError('Lütfen analiz etmek istediğiniz sözleşme metnini girin.');
+    if (!contractText.trim()) {
+      setError('Lütfen analiz edilecek bir sözleşme metni girin.');
       setLoading(false);
       return;
     }
@@ -29,7 +99,7 @@ export default function ContractPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ contractText: inputText }),
+        body: JSON.stringify({ contractText }),
       });
 
       const data = await response.json();
@@ -39,14 +109,9 @@ export default function ContractPage() {
         return;
       }
 
-      // API'den gelen veriyi doğrudan set ediyoruz, çünkü zaten JSON array olarak geliyor
-      // Önemli: API'den gelen yanıtın yapısı { analysisResult: [...] } şeklinde olmalı
-      if (data.analysisResult && Array.isArray(data.analysisResult)) {
-        setAnalysisResult(data.analysisResult);
-      } else {
-        setError('Beklenmeyen analiz sonucu formatı. Lütfen API çıktısını kontrol edin.');
-        setAnalysisResult([]);
-      }
+      // API'den gelen sonucu doğru formatta set ediyoruz
+      // API'den gelen data.analysisResult'ın bir dizi halinde olması bekleniyor
+      setAnalysisResult(data.analysisResult);
 
     } catch (err) {
       console.error('İstek gönderilirken hata:', err);
@@ -54,25 +119,6 @@ export default function ContractPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  // Madde uygunluk etiketine göre renk ve ikon döndüren yardımcı fonksiyon
-  const getLabelStyle = (label) => {
-    switch (label.trim()) {
-      case '✅ Uygun Madde':
-        return { color: 'text-green-600', icon: '✅' };
-      case '🟡 Riskli Madde':
-        return { color: 'text-yellow-600', icon: '🟡' };
-      case '🔴 Geçersiz Madde':
-        return { color: 'text-red-600', icon: '🔴' };
-      default:
-        return { color: 'text-gray-700', icon: '❓' };
-    }
-  };
-
-  // Akordiyon açma/kapama işlevi
-  const toggleAccordion = (index) => {
-    setActiveAccordion(activeAccordion === index ? null : index);
   };
 
   return (
@@ -102,31 +148,31 @@ export default function ContractPage() {
               Sözleşme Analizi
             </h1>
             <p className="text-gray-600 mb-8 text-center">
-              Sözleşme metinlerinizi Türk Hukuku'na göre detaylı bir şekilde analiz edin.
+              Yapay zeka destekli LegalMind AI ile hukuki belgelerinizi hızlıca analiz edin.
             </p>
 
             {/* Metin Giriş Alanı */}
             <div className="mb-6">
-              <label htmlFor="inputText" className="block text-gray-700 text-sm font-bold mb-2">
-                Analiz Edilecek Sözleşme Metni:
+              <label htmlFor="contractText" className="block text-gray-700 text-sm font-bold mb-2">
+                Sözleşme Metni:
               </label>
               <textarea
-                id="inputText"
+                id="contractText"
                 className="shadow appearance-none border rounded w-full py-3 px-4 text-gray-700 leading-tight focus:outline-none focus:shadow-outline resize-y min-h-[200px]"
                 placeholder="Sözleşme metnini buraya yapıştırın..."
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
+                value={contractText}
+                onChange={(e) => setContractText(e.target.value)}
               ></textarea>
             </div>
 
-            {/* Analiz Et Butonu */}
+            {/* Analiz Butonu */}
             <div className="flex justify-center">
               <button
-                onClick={handleAnalyze}
+                onClick={analyzeContract}
                 className={`bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full focus:outline-none focus:shadow-outline transition duration-300 ease-in-out ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                disabled={loading || !inputText.trim()}
+                disabled={loading}
               >
-                {loading ? 'Analiz Ediliyor...' : 'Analiz Et'}
+                {loading ? 'Analiz Ediliyor...' : 'Sözleşmeyi Analiz Et'}
               </button>
             </div>
 
@@ -137,73 +183,22 @@ export default function ContractPage() {
               </div>
             )}
 
-            {/* Hukuki Analiz Sonucu (Accordion Yapısı) */}
-            {analysisResult.length > 0 && (
-              <div className="mt-8 p-4 border rounded-md bg-white shadow-sm">
-                <h3 className="text-xl font-semibold text-gray-800 mb-4">Hukuki Analiz Sonucu:</h3>
-                {analysisResult.map((item, index) => {
-                  const { color, icon } = getLabelStyle(item.uygunlukEtiketi || '');
-
-                  return (
-                    <div
+            {/* Analiz Sonucu (Accordion içinde) */}
+            {analysisResult && (
+              <div className="mt-8">
+                <h3 className="text-2xl font-semibold text-gray-900 mb-4 text-center">
+                  Hukuki Analiz Sonucu:
+                </h3>
+                <Accordion>
+                  {analysisResult.map((item, index) => (
+                    <AccordionItem
                       key={index}
-                      className="mb-4 bg-gray-50 border border-gray-200 rounded-lg overflow-hidden shadow-sm"
-                    >
-                      <button
-                        className="flex items-center justify-between w-full p-4 cursor-pointer bg-white hover:bg-gray-100 transition-colors duration-200 focus:outline-none"
-                        onClick={() => toggleAccordion(index)}
-                      >
-                        <span className="font-bold text-lg text-gray-900 text-left">
-                          {item.maddeNo ? `Madde ${item.maddeNo}:` : `Madde ${index + 1}:`}{' '}
-                          {item.maddeBaslik || 'Başlıksız Madde'}
-                        </span>
-                        <span className={`font-semibold ${color} flex items-center`}>
-                          {icon} {item.uygunlukEtiketi || 'Etiket Bilgisi Yok'}
-                        </span>
-                      </button>
-                      {activeAccordion === index && (
-                        <div className="p-4 border-t border-gray-200 bg-white text-gray-800 text-base leading-relaxed">
-                          {item.maddeIcerigi && (
-                            <p className="mb-2">
-                              <strong className="text-blue-700">Madde İçeriği:</strong>{' '}
-                              <span className="whitespace-pre-wrap">{item.maddeIcerigi}</span>
-                            </p>
-                          )}
-                          {item.hukukiDegerlendirme && (
-                            <p className="mb-2">
-                              <strong className="text-blue-700">Hukuki Değerlendirme:</strong>{' '}
-                              <span className="whitespace-pre-wrap">{item.hukukiDegerlendirme}</span>
-                            </p>
-                          )}
-                          {item.gerekce && (
-                            <p className="mb-2">
-                              <strong className="text-blue-700">Gerekçe:</strong>{' '}
-                              <span className="whitespace-pre-wrap">{item.gerekce}</span>
-                            </p>
-                          )}
-                          {item.kanuniDayanak && (
-                            <p className="mb-2">
-                              <strong className="text-blue-700">Kanuni Dayanak:</strong>{' '}
-                              <span className="whitespace-pre-wrap">{item.kanuniDayanak}</span>
-                            </p>
-                          )}
-                          {item.yargiKarariOzeti && (
-                            <p className="mb-2">
-                              <strong className="text-blue-700">İlgili Yargı Kararı Özeti:</strong>{' '}
-                              <span className="whitespace-pre-wrap">{item.yargiKarariOzeti}</span>
-                            </p>
-                          )}
-                          {item.onerilenRevizeMadde && (
-                            <p className="mb-2">
-                              <strong className="text-blue-700">Önerilen Revize Madde:</strong>{' '}
-                              <span className="whitespace-pre-wrap">{item.onerilenRevizeMadde}</span>
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                      title={item.title}
+                      content={item.explanation}
+                      status={item.status} // API'den gelen status'ü AccordionItem'a iletiyoruz
+                    />
+                  ))}
+                </Accordion>
               </div>
             )}
           </div>
