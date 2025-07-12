@@ -10,7 +10,7 @@ export default function Translation() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // Çeviri için kullanılacak prompt (backend'deki ile uyumlu)
+  // Çeviri için kullanılacak prompt (backend'deki ile uyumlu, burada sadece gönderilecek değer)
   const translationPrompt = `
     Aşağıdaki İngilizce hukuki metni Türkçe'ye çevir.
     Çeviriyi yaparken hukuki terimlerin doğru ve yerleşik karşılıklarını kullanmaya özen göster.
@@ -19,7 +19,7 @@ export default function Translation() {
     Çevrilen metnin **kesinlikle** orijinal paragraf ve satır yapısını koru.
     Her paragrafın sonunda ve mantıklı olan her cümlenin sonunda mutlaka bir satır sonu (\\n karakteri) kullan.
     Her bir cümlenin veya cümleciklerin bitiminde **derhal** yeni satıra geçerek metnin okunabilirliğini en üst düzeye çıkar.
-    `;
+    `; // Bu prompt, API'ye gönderilecek olan prompt'tur.
 
   const handleTranslate = async () => {
     setError('');
@@ -40,7 +40,7 @@ export default function Translation() {
         },
         body: JSON.stringify({
           textToTranslate: textToTranslate,
-          prompt: translationPrompt, // Güncel çeviri prompt'unu kullan
+          prompt: translationPrompt, // Bu satırda `translationPrompt` backend'e gönderiliyor.
         }),
       });
 
@@ -51,7 +51,6 @@ export default function Translation() {
         return;
       }
 
-      // Sadece çevrilmiş metni ayarla, analizle ilgili bir şey beklemiyoruz
       setTranslatedText(data.translatedText);
 
     } catch (err) {
