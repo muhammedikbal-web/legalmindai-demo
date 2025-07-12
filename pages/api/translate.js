@@ -11,7 +11,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  const { textToTranslate, prompt } = req.body;
+  const { textToTranslate, prompt } = req.body; // prompt artık kullanılmıyor, kaldırabiliriz veya göz ardı edebiliriz
 
   if (!textToTranslate) {
     return res.status(400).json({ error: 'Çevrilecek metin sağlanmadı.' });
@@ -56,14 +56,14 @@ export default async function handler(req, res) {
             
             Crucially, **do not inject extra newline characters like "\\n" unless they are explicitly present or implied by paragraph breaks in the source text.**
             The goal is a direct, accurate, and visually identical translation in terms of layout.
-          `, // <-- PROMPT BURADA GÜNCELLENDİ
+          `,
         },
         {
           role: "user",
           content: textToTranslate,
         },
       ],
-      temperature: 0.2, // Daha düşük sıcaklık ile daha tutarlı çıktılar almayı hedefliyoruz
+      temperature: 0.7, // Düşük tutuculuk, daha iyi format takibi için artırıldı
       response_format: { type: "text" }, // Metin çıktısı bekliyoruz
     });
 
